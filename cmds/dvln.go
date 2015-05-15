@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dvln/lib"
 	"github.com/dvln/out"
 	"github.com/spf13/cast"
 	cli "github.com/spf13/cobra"
@@ -533,6 +534,12 @@ func dvlnEarlySetup() {
 	// Make sure that given --look|-l or cfg:Look or env:DVLN_LOOK are valid
 	if look := cfg.GetString("look"); look != "text" && look != "json" {
 		out.IssueExitf(-1, "The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
+	}
+
+	// Make sure that given --look|-l or cfg:Look or env:DVLN_LOOK are valid
+	if version := cfg.GetBool("version"); version {
+		out.Println(lib.DvlnVerStr())
+		os.Exit(0)
 	}
 }
 
