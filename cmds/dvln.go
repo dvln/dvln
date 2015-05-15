@@ -292,26 +292,23 @@ func pushCLIOptsToCfg() {
 
 	// Feature: as hooks are done we can grab the 1st field from Find
 	//        and get the cmd/subcmd info so we can load up the correct hooks
-	//        for the command that is running (?needs consideration?)
+	//        for the command that is running (?needs consideration?), note
+	//        that, as in the FIXME note below, the 1st return value which
+	//        is the command isn't coming back correctly in shortened subcmd
+	//        name situations.
 
 	// Find the flags the user used, traversing commands, subcommands for
 	// all allowed flags and such and storing them in the 'pflags' package
 	// Flagset structure used by the 'cli' (cobra) package:
-	_, flags, err := DvlnCmd.Find(args)
-	// FIXME: this is likely kind of weak... check this, when does Find return
-	//        an err and, if it does, should we just choke now since we can't
-	//        parse the flags?
-	if err == nil {
-		// Parse the found flags so the cli* pkg local variables below are set
-		// up so we can then push them into the 'cfg' (viper) pkg.
-		// Note that ParseFlags() will cache any error so we'll let the
-		// DvlnCmd.Execute() call to deal with those.  Mostly we just want
-		// to get whatever valid client settings we can find parsed, prepped and
-		// pushed into the global 'cfg' package, once that's set up we can turn
-		// on output verbosity/logging/etc correctly and log more detail on
-		// errors and such after that.
-		DvlnCmd.ParseFlags(flags)
-	}
+	_, flags, _ := DvlnCmd.Find(args)
+
+	// FIXME: this is likely kind of weak... I've seen 'dvln ver -Ljson' return
+	//        an error here (3rd arg) about ver not being a known command but it
+	//        is a unique short match for 'version' so that shouldn't be the case.
+	//        Right now we ignore the error and just do a 1st pass parse always
+	//        as that gets the persistent flags into the config regardless.
+	DvlnCmd.ParseFlags(flags)
+
 	// Feature: ParseFlags should auto-push the below CLI settings into the
 	//        'cfg' (viper) pkg so we shouldn't have to do that below with all
 	//        the Changed() calls... but that isn't done now so we do it here:
@@ -515,7 +512,7 @@ func dvlnEarlySetup() {
 	// Honor the parallel jobs setting (-j, --jobs, cfg file setting Jobs or env
 	// var DVLN_JOBS can all control this), identifies # of CPU's to use.
 	numCPU := runtime.NumCPU()
-	if jobs := cfg.GetString("Jobs"); jobs != "" && jobs != "all" {
+	if jobs := cfg.GetString("jobs"); jobs != "" && jobs != "all" {
 		if _, err := strconv.Atoi(jobs); err != nil {
 			out.Issuef("Jobs value should be a number or 'all', \"%s\" was given\n", jobs)
 			out.IssueExitln(-1, "Please run 'dvln [subcmd] --help' for usage")
@@ -528,8 +525,14 @@ func dvlnEarlySetup() {
 	} else {
 		runtime.GOMAXPROCS(numCPU)
 	}
-	if serve := cfg.GetBool("Serve"); serve {
+	// Do some validation on the 'serve' mode:
+	if serve := cfg.GetBool("serve"); serve {
 		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'")
+	}
+
+	// Make sure that given --look|-l or cfg:Look or env:DVLN_LOOK are valid
+	if look := cfg.GetString("look"); look != "text" && look != "json" {
+		out.IssueExitf(-1, "The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
 	}
 }
 
