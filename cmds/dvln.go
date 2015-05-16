@@ -74,6 +74,7 @@ var tmpLogfileUsed = false
 func init() {
 	// Init the analysis package in case we turn analysis on
 	Timer = analysis.Initalize()
+	globs.SetEnvPrefix("DVLN")
 
 	// Set up "global" key/value (variable) defaults in the 'globs' (viper) pkg,
 	initPkgGlobs()
