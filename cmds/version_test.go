@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"testing"
 
-	cfg "github.com/spf13/viper"
+	globs "github.com/spf13/viper"
 )
 
 func TestVersion(t *testing.T) {
-	cfg.Set("long", true)
+	globs.Set("long", true)
 	fmt.Println("Pretending to test")
 }
 
@@ -49,7 +49,7 @@ func TestFixUrl(t *testing.T) {
 
 	for i, test := range tests {
 		BaseUrl = test.CliBaseUrl
-		cfg.Set("BaseUrl", test.CfgBaseUrl)
+		globs.Set("BaseUrl", test.CfgBaseUrl)
 		serverAppend = test.AppendPort
 		serverPort = test.Port
 		result, err := fixUrl(BaseUrl)

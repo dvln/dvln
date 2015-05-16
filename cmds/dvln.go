@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cast"
 	cli "github.com/spf13/cobra"
 	analysis "github.com/spf13/nitro"
-	cfg "github.com/spf13/viper"
+	globs "github.com/spf13/viper"
 )
 
 // DvlnCmd is dvln's root command. Every other command attached to DvlnCmd
@@ -48,7 +48,7 @@ For complete documentation see: http://dvln.org`,
 }
 
 // package local CLI flags for dvln/subcommands, needed until 'cli' (cobra) can
-// push these automatically into 'cfg' (viper), ugh.  See cmd/globals.go for
+// push these automatically into 'globs' (viper), ugh.  See cmd/globals.go for
 // descriptions of any of these items (just remove the 'cli' prefix and look
 // for a case insensitive match on therest of the names):
 var cliConfig, cliCodeBase, cliDevLine, cliJobs, cliLook, cliPkg, cliRecord, cliWkspcDir string
@@ -75,12 +75,12 @@ func init() {
 	// Init the analysis package in case we turn analysis on
 	Timer = analysis.Initalize()
 
-	// Set up "global" key/value (variable) defaults in the 'cfg' (viper) pkg,
-	initAppDefaultSettings()
+	// Set up "global" key/value (variable) defaults in the 'globs' (viper) pkg,
+	initPkgGlobs()
 
 	// Add in the subcommands for the dvln command (get, update, ..), this
 	// will allow all CLI opts to be traversed fully in the initial loading
-	// of the CLI arguments into the 'cfg' (viper) Go pkg
+	// of the CLI arguments into the 'globs' (viper) Go pkg
 	addSubCommands()
 
 	// Do an early pass on the CLI options, defaults may shift so this
@@ -144,49 +144,52 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 	if reloadCLIFlags {
 		// this function is called multiple times, any 2nd (or 3rd) calls
 		// must set reloadCLI flags otherwise it will panic within the 'cli'
-		// (cobra) pkg and the pflags pkg it uses.  The net effect of a reload
+		// (cobra) pkg (in the pflags pkg it uses).  The net effect of a reload
 		// is that defaults for existing options will be updated, new options
 		// can be added but that is, lets us say, less tested at this point.
-		// - the primary use is to reload defaults so users config adjusts usage
+		// - the primary use is to reload defaults so users config file settings
+		//   are properly reflected in help screen/usage output and such
 		DvlnCmd.Flags().SetDefValueReparseOK(true)
 		DvlnCmd.PersistentFlags().SetDefValueReparseOK(true)
 	}
 
 	// Basic alphabetical listing of persistent flags (top and sub-level cmds),
-	// note that if you look in dvln/cmd/globals.go in initAppDefaultSettings it should
+	// note that if you look in dvln/cmd/globals.go in initPkgGlobs() it should
 	// be pretty clear which options need to have CLI set up here, within the
 	// local only block below or possibly within a given subcommands file
 	// such as dvln/cmd/get.go for the 'dvln get' subcommand:
-	desc, _, _ = cfg.Desc("analysis")
-	DvlnCmd.PersistentFlags().BoolVarP(&analysis.AnalysisOn, "analysis", "A", cfg.GetBool("analysis"), desc)
-	desc, _, _ = cfg.Desc("config")
-	DvlnCmd.PersistentFlags().StringVarP(&cliConfig, "config", "C", cfg.GetString("config"), desc)
-	desc, _, _ = cfg.Desc("debug")
-	DvlnCmd.PersistentFlags().BoolVarP(&cliDebug, "debug", "D", cfg.GetBool("debug"), desc)
-	desc, _, _ = cfg.Desc("force")
-	DvlnCmd.PersistentFlags().BoolVarP(&cliForce, "force", "f", cfg.GetBool("force"), desc)
-	desc, _, _ = cfg.Desc("fatalon")
-	DvlnCmd.PersistentFlags().IntVarP(&cliFatalOn, "fatalon", "F", cfg.GetInt("fatalon"), desc)
-	desc, _, _ = cfg.Desc("jobs")
-	DvlnCmd.PersistentFlags().StringVarP(&cliJobs, "jobs", "j", cfg.GetString("Jobs"), desc)
-	desc, _, _ = cfg.Desc("look")
-	DvlnCmd.PersistentFlags().StringVarP(&cliLook, "look", "L", cfg.GetString("Look"), desc)
-	desc, _, _ = cfg.Desc("quiet")
-	DvlnCmd.PersistentFlags().BoolVarP(&cliQuiet, "quiet", "q", cfg.GetBool("quiet"), desc)
-	desc, _, _ = cfg.Desc("record")
-	DvlnCmd.PersistentFlags().StringVarP(&cliRecord, "record", "R", cfg.GetString("record"), desc)
-	desc, _, _ = cfg.Desc("terse")
-	DvlnCmd.PersistentFlags().BoolVarP(&cliTerse, "terse", "t", cfg.GetBool("terse"), desc)
-	desc, _, _ = cfg.Desc("verbose")
-	DvlnCmd.PersistentFlags().BoolVarP(&cliVerbose, "verbose", "v", cfg.GetBool("verbose"), desc)
+	desc, _, _ = globs.Desc("analysis")
+	DvlnCmd.PersistentFlags().BoolVarP(&analysis.AnalysisOn, "analysis", "A", globs.GetBool("analysis"), desc)
+	desc, _, _ = globs.Desc("config")
+	DvlnCmd.PersistentFlags().StringVarP(&cliConfig, "config", "C", globs.GetString("config"), desc)
+	desc, _, _ = globs.Desc("debug")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliDebug, "debug", "D", globs.GetBool("debug"), desc)
+	desc, _, _ = globs.Desc("force")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliForce, "force", "f", globs.GetBool("force"), desc)
+	desc, _, _ = globs.Desc("fatalon")
+	DvlnCmd.PersistentFlags().IntVarP(&cliFatalOn, "fatalon", "F", globs.GetInt("fatalon"), desc)
+	desc, _, _ = globs.Desc("interact")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliInteract, "interact", "i", globs.GetBool("interact"), desc)
+	desc, _, _ = globs.Desc("jobs")
+	DvlnCmd.PersistentFlags().StringVarP(&cliJobs, "jobs", "j", globs.GetString("Jobs"), desc)
+	desc, _, _ = globs.Desc("look")
+	DvlnCmd.PersistentFlags().StringVarP(&cliLook, "look", "L", globs.GetString("Look"), desc)
+	desc, _, _ = globs.Desc("quiet")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliQuiet, "quiet", "q", globs.GetBool("quiet"), desc)
+	desc, _, _ = globs.Desc("record")
+	DvlnCmd.PersistentFlags().StringVarP(&cliRecord, "record", "R", globs.GetString("record"), desc)
+	desc, _, _ = globs.Desc("terse")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliTerse, "terse", "t", globs.GetBool("terse"), desc)
+	desc, _, _ = globs.Desc("verbose")
+	DvlnCmd.PersistentFlags().BoolVarP(&cliVerbose, "verbose", "v", globs.GetBool("verbose"), desc)
 
 	// As well as just top level dvln only command flags
-	desc, _, _ = cfg.Desc("port")
-	DvlnCmd.Flags().IntVarP(&cliPort, "port", "P", cfg.GetInt("Port"), desc)
-	desc, _, _ = cfg.Desc("serve")
-	DvlnCmd.Flags().BoolVarP(&cliServe, "serve", "S", cfg.GetBool("serve"), desc)
-	desc, _, _ = cfg.Desc("version")
-	DvlnCmd.Flags().BoolVarP(&cliVersion, "version", "V", cfg.GetBool("version"), desc)
+	desc, _, _ = globs.Desc("port")
+	DvlnCmd.Flags().IntVarP(&cliPort, "port", "P", globs.GetInt("Port"), desc)
+	desc, _, _ = globs.Desc("serve")
+	DvlnCmd.Flags().BoolVarP(&cliServe, "serve", "S", globs.GetBool("serve"), desc)
+	desc, _, _ = globs.Desc("version")
+	DvlnCmd.Flags().BoolVarP(&cliVersion, "version", "V", globs.GetBool("version"), desc)
 	DvlnCmd.Run = run
 	if reloadCLIFlags {
 		DvlnCmd.Flags().SetDefValueReparseOK(false)
@@ -203,7 +206,7 @@ func Execute() {
 	// Load up the users dvln config file from the correct location
 	loadDvlnConfigFile()
 
-	// Now that the full config is loaded into the 'cfg' (viper) pkg lets handle
+	// Now that the full config is loaded into the 'globs' (viper) pkg lets handle
 	// any early setup for the 'dvln' tool needed to give user any info needed
 	// or setup number of CPU's to use and that sort of thing.  These are things
 	// that can be done before kicking off subcommands (see Execute() below)
@@ -232,7 +235,7 @@ func Execute() {
 		// Identify the issue..
 		out.Issue(anyOutput)
 		if tmpLogfileUsed {
-			out.Noteln("Temp output logfile:", cfg.GetString("Record"))
+			out.Noteln("Temp output logfile:", globs.GetString("record"))
 		}
 		out.Exit(-1)
 	}
@@ -241,50 +244,50 @@ func Execute() {
 		out.Print(anyOutput)
 	}
 	if tmpLogfileUsed {
-		out.Notef("Temp output logfile is \"%s\"\n", cfg.GetString("Record"))
+		out.Notef("Temp output logfile is \"%s\"\n", globs.GetString("record"))
 	}
 	Timer.Step("cmds.Execute(): complete")
 }
 
-// scanUserConfigFile initializes a viper/cfg config file with sensible default
+// scanUserConfigFile initializes a viper/globs config file with sensible default
 // configuration flags and sets up any activities that have been requested
 // via the CLI and config settings (recording, debugging, verbosity, etc)
 func scanUserConfigFile() {
 	// What config file?, default: ~/.dvlncfg/cfg.{json|toml|yaml|yml}
-	// the cfg package uses config.json|toml|.. and we prefer less typing
+	// the globs package uses config.json|toml|.. and we prefer less typing
 	// so we're going with cfg.json|toml|<ext> as the default name
-	cfg.SetConfigName("cfg")
+	globs.SetConfigName("cfg")
 
-	// Now grab the config file path info from the 'cfg' (viper) Go pkg which
+	// Now grab the config file path info from the 'globs' (viper) Go pkg which
 	// has our globals and CLI opts and overrides set (except for the config
 	// file as we haven't read it yet of course, that's what we're doing):
-	configFile := cfg.GetString("config")
+	configFile := globs.GetString("config")
 
 	// Handle $HOME and ~ and such in the config file name
-	configFullPath := cfg.AbsPathify(configFile)
+	configFullPath := globs.AbsPathify(configFile)
 
 	// Typically Config defaults to a path (dir) to look for config.<extension>
 	// files in but it can also be a full path to a file, try and detect which:
 	if fileInfo, err := os.Stat(configFullPath); err == nil && fileInfo.IsDir() {
 		// if it's a dir then just add the path, default looks for config.<etc>
-		cfg.AddConfigPath(configFile)
+		globs.AddConfigPath(configFile)
 	} else {
 		// if it's not a visible dir assume it's a file, if no file no problem
-		cfg.SetConfigFile(configFullPath)
+		globs.SetConfigFile(configFullPath)
 	}
-	cfg.ReadInConfig()
+	globs.ReadInConfig()
 }
 
-// pushCLIOptsToCfg is used to peruse the flags used by the client on the CLI
-// (in the 'cli' pkg via init() methods) and to now update the 'cfg' (viper)
+// pushCLIOptsToGlobs is used to peruse the flags used by the client on the CLI
+// (in the 'cli' pkg via init() methods) and to now update the 'globs' (viper)
 // package so that those CLI settings are recorded correctly there.
-// Feature: The various cfg.Set() calls should eventually be auto-handled by
+// Feature: The various globs.Set() calls should eventually be auto-handled by
 // the 'cli' (cobra) package but currently aren't (when that is done the 'cli*'
 // variables at the top of this pkg should be tossed and the *Flags() methods
 // used shouldn't need a global to shove the flag results into, they should
-// just automatically go into the cfg/viper package).  Do not remove the 1st
+// just automatically go into the globs/viper package).  Do not remove the 1st
 // part of this method though when that is done, it is needed.
-func pushCLIOptsToCfg() {
+func pushCLIOptsToGlobs() {
 	if len(os.Args) == 1 {
 		return
 	}
@@ -311,62 +314,65 @@ func pushCLIOptsToCfg() {
 	DvlnCmd.ParseFlags(flags)
 
 	// Feature: ParseFlags should auto-push the below CLI settings into the
-	//        'cfg' (viper) pkg so we shouldn't have to do that below with all
+	//        'globs' (viper) pkg so we shouldn't have to do that below with all
 	//        the Changed() calls... but that isn't done now so we do it here:
 
 	// NewSubCommand: If you add a new subcommand you need to add a method to
 	//     that subcommand named like what's below, see cmds/get.go for the
-	//     pushGetCmdCLIOptsToCfg() to get an idea.
-	pushDvlnCmdCLIOptsToCfg()
-	pushGetCmdCLIOptsToCfg()
-	pushVersionCmdCLIOptsToCfg()
+	//     pushGetCmdCLIOptsToGlobs() to get an idea.
+	pushDvlnCmdCLIOptsToGlobs()
+	pushGetCmdCLIOptsToGlobs()
+	pushVersionCmdCLIOptsToGlobs()
 }
 
-func pushDvlnCmdCLIOptsToCfg() {
-	// Persistent flags are pushed into the 'cfg' (viper) settings package here
+func pushDvlnCmdCLIOptsToGlobs() {
+	// Persistent flags are pushed into the 'globs' (viper) settings package here
 	if DvlnCmd.PersistentFlags().Lookup("analysis").Changed {
-		cfg.Set("analysis", analysis.AnalysisOn)
+		globs.Set("analysis", analysis.AnalysisOn)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("config").Changed {
-		cfg.Set("config", cliConfig)
+		globs.Set("config", cliConfig)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("debug").Changed {
-		cfg.Set("debug", cliDebug)
+		globs.Set("debug", cliDebug)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("fatalon").Changed {
-		cfg.Set("fatalon", cliFatalOn)
+		globs.Set("fatalon", cliFatalOn)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("force").Changed {
-		cfg.Set("force", cliForce)
+		globs.Set("force", cliForce)
+	}
+	if DvlnCmd.PersistentFlags().Lookup("interact").Changed {
+		globs.Set("interact", cliInteract)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("jobs").Changed {
-		cfg.Set("jobs", cliJobs)
+		globs.Set("jobs", cliJobs)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("look").Changed {
-		cfg.Set("look", cliLook)
+		globs.Set("look", cliLook)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("quiet").Changed {
-		cfg.Set("quiet", cliQuiet)
+		globs.Set("quiet", cliQuiet)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("record").Changed {
-		cfg.Set("record", cliRecord)
+		globs.Set("record", cliRecord)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("terse").Changed {
-		cfg.Set("terse", cliTerse)
+		globs.Set("terse", cliTerse)
 	}
 	if DvlnCmd.PersistentFlags().Lookup("verbose").Changed {
-		cfg.Set("verbose", cliVerbose)
+		globs.Set("verbose", cliVerbose)
 	}
 
 	// local flags for dvln bootstrapped here
 	if DvlnCmd.Flags().Lookup("port").Changed {
-		cfg.Set("port", cliPort)
+		globs.Set("port", cliPort)
 	}
 	if DvlnCmd.Flags().Lookup("serve").Changed {
-		cfg.Set("serve", cliServe)
+		globs.Set("serve", cliServe)
 	}
 	if DvlnCmd.Flags().Lookup("version").Changed {
-		cfg.Set("version", cliVersion)
+		globs.Set("version", cliVersion)
 	}
 }
 
@@ -376,50 +382,68 @@ func pushDvlnCmdCLIOptsToCfg() {
 func adjustOutLevels() {
 	// Set screen output threshold (defaults to LevelInfo which is the 'out'
 	// pkg default already, but someone can change the level now via cfg/env)
-	out.SetThreshold(out.Level(cfg.GetInt("ScreenLevel")), out.ForScreen)
+	out.SetThreshold(out.Level(globs.GetInt("screenlevel")), out.ForScreen)
 	// Note: for all of the below threshold settings the use of ForBoth means
 	//       both screen and logfile output will be set at the given 'out' pkg
 	//       levels, keep in mind that log file defaults to the writer
 	//       ioutil.Discard (/dev/null) to start so you need to set up a writer
 	//       which is done further below
-	if cfg.GetBool("Debug") && cfg.GetBool("Verbose") {
+	if globs.GetBool("debug") && globs.GetBool("verbose") {
 		out.SetThreshold(out.LevelTrace, out.ForBoth)
+		// For trace level (highest debug level) output we go crazy and turn
+		// on many "prefix" flags (often used when writing to the logfile) so
+		// that loglevels, timestamps, Go filename/line#/funcname, etc are all
+		// displayed, set DVLN_SCREEN_FLAGS to "none" to suppress that
 		if os.Getenv("DVLN_SCREEN_FLAGS") == "" {
 			os.Setenv("DVLN_SCREEN_FLAGS", "debug")
 		}
-	} else if cfg.GetBool("Debug") {
+
+	} else if globs.GetBool("debug") {
 		out.SetThreshold(out.LevelDebug, out.ForBoth)
-	} else if cfg.GetBool("Verbose") {
+	} else if globs.GetBool("verbose") {
 		out.SetThreshold(out.LevelVerbose, out.ForBoth)
-	} else if cfg.GetBool("Quiet") {
+	} else if globs.GetBool("quiet") {
 		out.SetThreshold(out.LevelError, out.ForScreen)
 	}
 
 	// Handle a few special case settings: pkg 'out' is low level and allows
 	// for an env to tweak it's flags (output line metadata augmentation) on
-	// the fly... so we'll let DVLN settings do the same to control it.  Note
-	// that normally you wouldn't want to do a hack like this, you would instead
-	// want to use cfg (viper) to store your key/values and, using that, you
+	// the fly... so we'll let special DVLN env settings control that.  Note
+	// that normally you would *NOT* want to do a hack like this, instead you
+	// want to use 'globs' (viper) to store your key/values and, using that, you
 	// get free env overrides and such (but the 'out' pkg is low level enough
-	// that it can't depend upon cfg/viper since viper uses that pkg)
+	// that it can't depend upon the 'globs' config pkg (as it depends on 'out')
+	// - note that we allow a setting of "none" to be special and to mean "",
+	//   (see above DVLN_SCREEN_FLAG setting, maybe you don't want screen flags
+	//   in which case using "none" will do that but "" would not)
 	var flags string
 	if flags = os.Getenv("DVLN_SCREEN_FLAGS"); flags != "" {
-		os.Setenv("PKG_OUT_SCREEN_FLAGS", flags)
+		if flags != "none" {
+			os.Setenv("PKG_OUT_SCREEN_FLAGS", flags)
+		}
 	}
 	if flags = os.Getenv("DVLN_LOGFILE_FLAGS"); flags != "" {
-		os.Setenv("PKG_OUT_LOGFILE_FLAGS", flags)
+		if flags != "none" {
+			os.Setenv("PKG_OUT_LOGFILE_FLAGS", flags)
+		}
 	}
 	if flags = os.Getenv("DVLN_DEBUG_SCOPE"); flags != "" {
-		os.Setenv("PKG_OUT_DEBUG_SCOPE", flags)
+		if flags != "none" {
+			os.Setenv("PKG_OUT_DEBUG_SCOPE", flags)
+		}
 	}
 	if flags = os.Getenv("DVLN_NONZERO_EXIT_STRACKTRACE"); flags != "" {
-		os.Setenv("PKG_OUT_NONZERO_EXIT_STACKTRACE", flags)
+		if flags != "none" {
+			os.Setenv("PKG_OUT_NONZERO_EXIT_STACKTRACE", flags)
+		}
 	}
 	if flags = os.Getenv("DVLN_PKG_OUT_SMART_FLAGS_PREFIX"); flags != "" {
-		os.Setenv("PKG_OUT_SMART_FLAGS_PREFIX", flags)
+		if flags != "none" {
+			os.Setenv("PKG_OUT_SMART_FLAGS_PREFIX", flags)
+		}
 	}
 
-	if record := cfg.GetString("Record"); record != "" && record != "off" {
+	if record := globs.GetString("record"); record != "" && record != "off" {
 		// If the user has requested recording/logging the below will set up
 		// an io.Writer for a log file (via the 'out' package).  At this point
 		// logging is enabled at the "Info/Print" (LevelInfo) level which
@@ -428,40 +452,40 @@ func adjustOutLevels() {
 		if record == "temp" || record == "tmp" {
 			tmpLogfileUsed = true
 			record = out.UseTempLogFile("dvln.")
-			cfg.Set("Record", record)
+			globs.Set("Record", record)
 		} else {
-			out.SetLogFile(cfg.AbsPathify(record))
+			out.SetLogFile(globs.AbsPathify(record))
 			// quick little hack to trim out home dir and shove in ~, keeps
 			// the usage output brief if --help is used and such
-			homeDir := cfg.UserHomeDir()
+			homeDir := globs.UserHomeDir()
 			if homeDir != "" && strings.HasPrefix(record, homeDir+string(filepath.Separator)) {
 				length := len(homeDir)
 				rest := record[length:]
 				record = "~" + cast.ToString(rest)
 			}
-			cfg.Set("Record", record)
+			globs.Set("Record", record)
 		}
 		currThresh := out.Threshold(out.ForLogfile)
 		if currThresh == out.LevelDiscard {
 			// if no threshold level set yet start with LevelInfo
-			out.SetThreshold(out.Level(cfg.GetInt("LogfileLevel")), out.ForLogfile)
+			out.SetThreshold(out.Level(globs.GetInt("logfilelevel")), out.ForLogfile)
 		}
 	}
 }
 
-// loadDvlnConfigFile finishes updating the 'cfg' (viper) pkg so that all
+// loadDvlnConfigFile finishes updating the 'globs' (viper) pkg so that all
 // CLI opts are fully visible and the users config file data is also loaded
 // up as well, hurray!  With that data we'll also re-update dvln so that
 // output data is going to the screen and any mirror logfile at the right
 // output levels and such (and that any help screens reflect those final
 // "full" settings from all this config data)
 func loadDvlnConfigFile() {
-	// Push all CLI options into cfg (viper) pkg at which point we've taken into
-	// account default opt settings (already set in cfg via the init method),
-	// env settings (handled in cfg get calls), and, with this, CLI options
-	// have been parsed and pushed into 'cfg'.  All that remains is the users
+	// Push all CLI options into globs (viper) pkg at which point we've taken into
+	// account default opt settings (already set in globs via the init method),
+	// env settings (handled in globs get calls), and, with this, CLI options
+	// have been parsed and pushed into 'globs'.  All that remains is the users
 	// config file (below) and any codebase or VCS pkg settings.
-	pushCLIOptsToCfg()
+	pushCLIOptsToGlobs()
 
 	// Do an early output level adjustment in case CLI opts are used that will
 	// add debug/record/etc info so that our adjustOutLevels() actually has a
@@ -471,7 +495,7 @@ func loadDvlnConfigFile() {
 
 	// Scan the users config file, if any, honoring any CLI opts that might
 	// override the location of the user config file and push those settings
-	// into the 'cfg' (viper) pkg as well.  Once done the 'cfg' globals will
+	// into the 'globs' (viper) pkg as well.  Once done the 'globs' globals will
 	// be complete (Feature: except for fugure codebase and VCS pkg settings):
 	scanUserConfigFile()
 
@@ -498,7 +522,7 @@ func loadDvlnConfigFile() {
 
 }
 
-// dvlnEarlySetup basically does just that... now that the 'cfg' config
+// dvlnEarlySetup basically does just that... now that the 'globs' config
 // data is fully populated with CLI's, env's, config files, codebase/pkg
 // settings and defaults, lets use it for 'dvln' level early setup
 func dvlnEarlySetup() {
@@ -506,14 +530,14 @@ func dvlnEarlySetup() {
 	// within scanUserConfigFile() but, if output/logfile thresholds changed in
 	// the users config file we may have missed logging it, so do it again as
 	// it's useful for client/admin troubleshooting of dvln:
-	if cfg.ConfigFileUsed() != "" {
-		out.Debugln("Used config file:", cfg.ConfigFileUsed())
+	if globs.ConfigFileUsed() != "" {
+		out.Debugln("Used config file:", globs.ConfigFileUsed())
 	}
 
 	// Honor the parallel jobs setting (-j, --jobs, cfg file setting Jobs or env
 	// var DVLN_JOBS can all control this), identifies # of CPU's to use.
 	numCPU := runtime.NumCPU()
-	if jobs := cfg.GetString("jobs"); jobs != "" && jobs != "all" {
+	if jobs := globs.GetString("jobs"); jobs != "" && jobs != "all" {
 		if _, err := strconv.Atoi(jobs); err != nil {
 			out.Issuef("Jobs value should be a number or 'all', \"%s\" was given\n", jobs)
 			out.IssueExitln(-1, "Please run 'dvln [subcmd] --help' for usage")
@@ -527,17 +551,22 @@ func dvlnEarlySetup() {
 		runtime.GOMAXPROCS(numCPU)
 	}
 	// Do some validation on the 'serve' mode:
-	if serve := cfg.GetBool("serve"); serve {
+	if serve := globs.GetBool("serve"); serve {
 		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'")
 	}
 
-	// Make sure that given --look|-l or cfg:Look or env:DVLN_LOOK are valid
-	if look := cfg.GetString("look"); look != "text" && look != "json" {
+	// Make sure that given --look|-l or cfgfile:Look or env:DVLN_LOOK are valid
+	look := globs.GetString("look")
+	if look != "text" && look != "json" {
 		out.IssueExitf(-1, "The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
+	} else if look == "json" && globs.GetBool("interact") {
+		out.Debugln("Interactive runs are not available for the 'json' output \"look\"")
+		out.Debugln("- silently disabling interaction (client may have it set for text output)")
+		globs.Set("interact", false)
 	}
 
-	// Make sure that given --look|-l or cfg:Look or env:DVLN_LOOK are valid
-	if version := cfg.GetBool("version"); version {
+	// If the developer asks for the version of the tool print that out
+	if version := globs.GetBool("version"); version {
 		out.Println(lib.DvlnVerStr())
 		os.Exit(0)
 	}

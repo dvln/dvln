@@ -14,20 +14,18 @@
 // Package cmds defines and implements command-line commands and flags used by
 // dvln.  Commands and flags are implemented using the cobra CLI commander
 // library (dvln/lib/3rd/cobra) which will be imported under "cli".  The
-// globals.go file contains cfg (viper) package "globals" for the dvln
+// globals.go file contains globs (viper) package "globals" for the dvln
 // tool
 package cmds
 
-//	"dvln/lib/out"
-//	cfg "dvln/lib/3rd/viper"
 import (
 	"github.com/dvln/out"
-	cfg "github.com/spf13/viper"
+	globs "github.com/spf13/viper"
 )
 
-// initAppDefaultSettings sets up default settings for any variables used
+// initPkgGlobs sets up default settings for any variables used
 // throughout the dvln tool... "globals" so to speak. These will be
-// stashed in the 'cfg' (viper) package at the default level (lowest
+// stashed in the 'globs' (viper) package at the default level (lowest
 // priority essentially) and can be overriden via config file, CLI
 // flags, sometimes codebase level overrides, etc
 //
@@ -43,17 +41,17 @@ import (
 //            anything from within 'dvlnlib'.
 //
 // Note: for any new CLI focused option you need to modify cmds/dvln.go
-//       so pushCLIOptsTofg() pushes the CLI option into the 'cfg' (viper)
+//       so pushCLIOptsTofg() pushes the CLI option into the 'globs' (viper)
 //       package... otherwise you're stuck with the CLI not working  ;)... and
-//       yes, that should be fixed (as flags should be a 1st class citizen
-//       and not have to use cfg.Set() to push them into cfg/viper, ugh)
-func initAppDefaultSettings() {
+//
+//       and not have to use globs.Set() to push them into globs/viper, ugh)
+func initPkgGlobs() {
 	// Note: if you want aliases for keys you can add them like so, note
-	//       that cfg (viper) is "case independent" so Taxonomies and
-	//       taxonomies are identical as far as 'cfg' is concerned
+	//       that globs (viper) is "case independent" so Taxonomies and
+	//       taxonomies are identical as far as 'globs' is concerned
 
-	// cfg.SetDefault("Taxonomies", map[string]string{"tag": "tags", "category": "categories"})
-	// cfg.RegisterAlias("indexes", "taxonomies")
+	// globs.SetDefault("Taxonomies", map[string]string{"tag": "tags", "category": "categories"})
+	// globs.RegisterAlias("indexes", "taxonomies")
 	// NewSubCommand: if you have a new subcommand with new CLI options you'll
 	// want to add a variable for it here and set up default settings,
 	// description and additional data such as user level that will use
@@ -65,79 +63,75 @@ func initAppDefaultSettings() {
 	//       essentially any grouping you see fit at this point but try and
 	//       at least get the top level Section right
 
-	// Section: CLIGlobal class options, vars that can come in from the CLI
+	// Section: ConstGlobal variables to store data (default value only, no overrides)
 	// - please add them alphabetically and don't reuse existing opts/vars
-	cfg.SetDefault("analysis", false)
-	cfg.SetDesc("analysis", "memory and timing analytics", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("codebase", "") // no default code base to start with
-	cfg.SetDesc("codebase", "codebase name or URL", cfg.NoviceUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("config", "~/.dvlncfg/") // defaults to .dvlncfg/config.json|yaml|..
-	cfg.SetDesc("config", "file|path, path scans cfg.json|toml|yml", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("debug", false)
-	cfg.SetDesc("debug", "control debug output", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("devline", "") // no default devline to start with
-	cfg.SetDesc("devline", "development line name", cfg.NoviceUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("fatalon", 1) // exits on 1st VCS error
-	cfg.SetDesc("fatalon", "# of VCS clone errs to choke on", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("force", false) // fail on dangerous ops
-	cfg.SetDesc("force", "force bypass of protections", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("interact", false) // the default is no user interaction
-	cfg.SetDesc("interact", "control client prompting", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("jobs", "all") // default: use all CPU's
-	cfg.SetDesc("jobs", "# of CPU's to use for jobs", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("look", "text") // text or json
-	cfg.SetDesc("look", "output look, text|json", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("pkg", "") // no default package(s) to start with
-	cfg.SetDesc("pkg", "package selector, comma separated", cfg.NoviceUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("port", 3856) // port when serving
-	cfg.SetDesc("port", "port # for --serve mode", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("quiet", false) // normal output to start
-	cfg.SetDesc("quiet", "silent running", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("record", "off") // no output log to start
-	cfg.SetDesc("record", "log to file or 'tmp'", cfg.NoviceUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("serve", false) // serve defaults off
-	cfg.SetDesc("serve", "activate REST serve mode", cfg.ExpertUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("terse", false) // regular non-terse mode
-	cfg.SetDesc("terse", "output brevity", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("verbose", false) // not verbose to start
-	cfg.SetDesc("verbose", "output verbosity, extends debug", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("version", false)
-	cfg.SetDesc("version", "show tool version details", cfg.NormalUser, cfg.CLIGlobal)
-
-	cfg.SetDefault("wkspcdir", ".") // assume current dir is where workspace is
-	cfg.SetDesc("wkspcdir", "workspace directory", cfg.NormalUser, cfg.CLIGlobal)
-
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
-	cfg.SetDefault("logfileLevel", int(out.LevelInfo)) // default (if activate)
-	cfg.SetDesc("logfileLevel", "log file output level (used if logging on)", cfg.ExpertUser, cfg.BasicGlobal)
+	globs.SetDefault("logfileLevel", int(out.LevelInfo)) // default (if activate)
+	globs.SetDesc("logfileLevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
 
-	cfg.SetDefault("screenLevel", int(out.LevelInfo)) // default print lvl
-	cfg.SetDesc("screenLevel", "screen output level", cfg.ExpertUser, cfg.BasicGlobal)
+	globs.SetDefault("screenLevel", int(out.LevelInfo)) // default print lvl
+	globs.SetDesc("screenLevel", "screen output level", globs.ExpertUser, globs.BasicGlobal)
 
-
-	// Section: ConstGlobal variables to store data (default value only, no overrides)
+	// Section: CLIGlobal class options, vars that can come in from the CLI
 	// - please add them alphabetically and don't reuse existing opts/vars
-	cfg.SetDefault("dvlnToolVer", "0.0.1") // current version of the dvln tool
-	cfg.SetDesc("dvlnToolVer", "current version of the dvln tool", cfg.InternalUse, cfg.ConstGlobal)
+	globs.SetDefault("analysis", false)
+	globs.SetDesc("analysis", "memory and timing analytics", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("codebase", "") // no default code base to start with
+	globs.SetDesc("codebase", "codebase name or URL", globs.NoviceUser, globs.CLIGlobal)
+
+	globs.SetDefault("config", "~/.dvlncfg/") // defaults to .dvlncfg/cfg.json|toml|yaml|..
+	globs.SetDesc("config", "file|path, path scans cfg.json|toml|yml", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("debug", false)
+	globs.SetDesc("debug", "control debug output", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("devline", "") // no default devline to start with
+	globs.SetDesc("devline", "development line name", globs.NoviceUser, globs.CLIGlobal)
+
+	globs.SetDefault("fatalon", 1) // exits on 1st VCS error
+	globs.SetDesc("fatalon", "# of VCS clone errs to choke on", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("force", false) // fail on dangerous ops
+	globs.SetDesc("force", "force bypass of protections", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("interact", false) // the default is no user prompting
+	globs.SetDesc("interact", "prompting control", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("jobs", "all") // default: use all CPU's
+	globs.SetDesc("jobs", "# of CPU's to use for jobs", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("look", "text") // text or json
+	globs.SetDesc("look", "output look, text|json", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("pkg", "") // no default package(s) to start with
+	globs.SetDesc("pkg", "package selector, comma separated", globs.NoviceUser, globs.CLIGlobal)
+
+	globs.SetDefault("port", 3856) // port when serving
+	globs.SetDesc("port", "port # for --serve mode", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("quiet", false) // normal output to start
+	globs.SetDesc("quiet", "silent running", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("record", "off") // no output log to start
+	globs.SetDesc("record", "log to file or 'tmp'", globs.NoviceUser, globs.CLIGlobal)
+
+	globs.SetDefault("serve", false) // serve defaults off
+	globs.SetDesc("serve", "activate REST serve mode", globs.ExpertUser, globs.CLIGlobal)
+
+	globs.SetDefault("terse", false) // regular non-terse mode
+	globs.SetDesc("terse", "output brevity", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("verbose", false) // not verbose to start
+	globs.SetDesc("verbose", "output verbosity, extends debug", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("version", false)
+	globs.SetDesc("version", "show tool version details", globs.NormalUser, globs.CLIGlobal)
+
+	globs.SetDefault("wkspcdir", ".") // assume current dir is where workspace is
+	globs.SetDesc("wkspcdir", "workspace directory", globs.NormalUser, globs.CLIGlobal)
 
 	// Section: <add more sections as needed>
 }

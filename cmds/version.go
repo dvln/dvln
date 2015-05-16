@@ -37,9 +37,9 @@ func init() {
 	setupVersionCmdCLIArgs(reloadCLIFlags)
 }
 
-// setupVersionCmdCLIArgs is used from init() to set up the 'cfg' (viper) pkg CLI
-// options available to this subcommand (other options were already set up in
-// the "parent" dvln subcommand in a like-named method, every subcommand has
+// setupVersionCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg
+// CLI options available to this subcommand (other options were already set up
+// in the "parent" dvln subcommand in a like-named method, every subcommand has
 // a like named method "setup<subcmd>CmdCLIArgs()"
 func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
 	if reloadCLIFlags {
@@ -56,14 +56,14 @@ func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
 	}
 }
 
-// pushVersionCmdCLIOptsToCfg would be fleshed out with any options the
+// pushVersionCmdCLIOptsToGlobs would be fleshed out with any options the
 // 'dvln version' command had but as there are none currently it's a
 // no-op
-func pushVersionCmdCLIOptsToCfg() {
+func pushVersionCmdCLIOptsToGlobs() {
 	// AddOpts: if there were opts for the subcmd set them here, see cmds/get.go
-	// pushGetCmdCLIOptsToCfg() for an example.  Note that "persistent" opts are
-	// set in cmds/dvln.go, only opts specific to 'dvln version' would go here
-	// and there currently are none
+	// pushGetCmdCLIOptsToGlobs() for an example.  Note that "persistent" opts
+	// are set in cmds/dvln.go, only opts specific to 'dvln version' would go
+	// here and there currently are none
 }
 
 // version is the function executed by 'dvln version' assuming all opts are
@@ -74,4 +74,3 @@ func version(cmd *cli.Command, args []string) {
 	dvlnVerStr := lib.DvlnVerStr()
 	out.Println(dvlnVerStr)
 }
-

@@ -18,7 +18,7 @@ package cmds
 import (
 	"github.com/dvln/out"
 	cli "github.com/spf13/cobra"
-	cfg "github.com/spf13/viper"
+	globs "github.com/spf13/viper"
 )
 
 var getCmd = &cli.Command{
@@ -27,7 +27,7 @@ var getCmd = &cli.Command{
 	Long: `Get packages for a codebase [+ devline], create/modify a workspace, eg:
   % dvln get --codebase=prod_x --devline=proj_x
   % dvln get -c prod_x -d proj_x
-  % dvln g -d proj_x    (if cfg:CodeBase or env:DVLN_CODEBASE set)`,
+  % dvln g -d proj_x    (if cfgfile:CodeBase or env:DVLN_CODEBASE set)`,
 	Run: get,
 }
 
@@ -38,7 +38,7 @@ func init() {
 	setupGetCmdCLIArgs(reloadCLIFlags)
 }
 
-// setupGetCmdCLIArgs is used from init() to set up the 'cfg' (viper) pkg CLI
+// setupGetCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg CLI
 // options available to this subcommand (other options were already set up in
 // the "parent" dvln subcommand in a like-named method, every subcommand has
 // a like named method "setup<subcmd>CmdCLIArgs()"
@@ -47,42 +47,37 @@ func setupGetCmdCLIArgs(reloadCLIFlags bool) {
 	if reloadCLIFlags {
 		getCmd.Flags().SetDefValueReparseOK(true)
 	}
-	desc, _, _ = cfg.Desc("codebase")
-	getCmd.Flags().StringVarP(&cliCodeBase, "codebase", "c", cfg.GetString("codebase"), desc)
-	desc, _, _ = cfg.Desc("devline")
-	getCmd.Flags().StringVarP(&cliDevLine, "devline", "d", cfg.GetString("devline"), desc)
-	desc, _, _ = cfg.Desc("interact")
-	getCmd.Flags().BoolVarP(&cliInteract, "interact", "i", cfg.GetBool("interact"), desc)
-	desc, _, _ = cfg.Desc("pkg")
-	getCmd.Flags().StringVarP(&cliPkg, "pkg", "p", cfg.GetString("pkg"), desc)
-	desc, _, _ = cfg.Desc("wkspcdir")
-	getCmd.Flags().StringVarP(&cliWkspcDir, "wkspcdir", "w", cfg.GetString("wkspcdir"), desc)
+	desc, _, _ = globs.Desc("codebase")
+	getCmd.Flags().StringVarP(&cliCodeBase, "codebase", "c", globs.GetString("codebase"), desc)
+	desc, _, _ = globs.Desc("devline")
+	getCmd.Flags().StringVarP(&cliDevLine, "devline", "d", globs.GetString("devline"), desc)
+	desc, _, _ = globs.Desc("pkg")
+	getCmd.Flags().StringVarP(&cliPkg, "pkg", "p", globs.GetString("pkg"), desc)
+	desc, _, _ = globs.Desc("wkspcdir")
+	getCmd.Flags().StringVarP(&cliWkspcDir, "wkspcdir", "w", globs.GetString("wkspcdir"), desc)
 	getCmd.Run = get
 	if reloadCLIFlags {
 		getCmd.Flags().SetDefValueReparseOK(false)
 	}
 }
 
-// pushGetCmdCLIOptsToCfg shoves any user set CLI options into the 'cfg'
+// pushGetCmdCLIOptsToGlobs shoves any user set CLI options into the 'globs'
 // (viper) package if it was used on the CLI (so viper has a full picture
 // of all variables, their defaults, any env settings, and now any CLI
 // settings as well (amongst other settings)
-func pushGetCmdCLIOptsToCfg() {
+func pushGetCmdCLIOptsToGlobs() {
 	// local flags for get subcmd bootstrapped here
 	if getCmd.Flags().Lookup("codebase").Changed {
-		cfg.Set("codebase", cliCodeBase)
+		globs.Set("codebase", cliCodeBase)
 	}
 	if getCmd.Flags().Lookup("devline").Changed {
-		cfg.Set("devline", cliDevLine)
-	}
-	if getCmd.Flags().Lookup("interact").Changed {
-		cfg.Set("interact", cliInteract)
+		globs.Set("devline", cliDevLine)
 	}
 	if getCmd.Flags().Lookup("pkg").Changed {
-		cfg.Set("pkg", cliPkg)
+		globs.Set("pkg", cliPkg)
 	}
 	if getCmd.Flags().Lookup("wkspcdir").Changed {
-		cfg.Set("wkspcdir", cliWkspcDir)
+		globs.Set("wkspcdir", cliWkspcDir)
 	}
 }
 
