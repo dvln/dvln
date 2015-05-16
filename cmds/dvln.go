@@ -68,13 +68,16 @@ var cliPkgOut = new(bytes.Buffer)
 // so the client knows where to find the file.
 var tmpLogfileUsed = false
 
+// insure that the globs (viper) packages env prefix is set *before* any
+// init() functions are run so they all honor hte DVLN_ prefix
+var envPrefix = globs.SetEnvPrefix("DVLN")
+
 // init() preps the analysis pkg, scans in app globals, adds in subcommands
 // and makes a 1st pass at prepping the CLI options/descriptions/defaults
 // for the 'cli' (cobra) Go pkg being used to drive this CLI tool.
 func init() {
 	// Init the analysis package in case we turn analysis on
 	Timer = analysis.Initalize()
-	globs.SetEnvPrefix("DVLN")
 
 	// Set up "global" key/value (variable) defaults in the 'globs' (viper) pkg,
 	initPkgGlobs()

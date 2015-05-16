@@ -15,11 +15,12 @@
 // commander created by spf13) which manages subcommands and opts and such.
 package main
 
-import "dvln/cmds"
+import (
+	"dvln/cmds"
+)
 
 func main() {
 	// Kick off the the 'cli' mgmt package (Cobra commander) for the dvln
 	// command and the various subcommands and opts:
 	cmds.Execute()
 }
-
