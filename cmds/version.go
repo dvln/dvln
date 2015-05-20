@@ -46,24 +46,17 @@ func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
 		versionCmd.Flags().SetDefValueReparseOK(true)
 	}
 
-	// AddOpts: if there were opts for the subcmd set them here, see cmds/get.go
-	// for an example.  Note that "persistent" opts are set in cmds/dvln.go,
-	// only opts specific to 'dvln version' would go here (none currently)
+	// NewCLIOpts: if there were opts for this subcmd set them here, see
+	// cmds/get.go for an example.  Note that "persistent" opts are set in
+	// cmds/dvln.go, only opts specific to the 'dvln version' subcommand
+	// would go here
+	// Note that you'll need to modify cmds/global.go as well otherwise your
+	// globs.Desc() call and globs.GetBool("myopt") will not work.
 
 	versionCmd.Run = version
 	if reloadCLIFlags {
 		versionCmd.Flags().SetDefValueReparseOK(false)
 	}
-}
-
-// pushVersionCmdCLIOptsToGlobs would be fleshed out with any options the
-// 'dvln version' command had but as there are none currently it's a
-// no-op
-func pushVersionCmdCLIOptsToGlobs() {
-	// AddOpts: if there were opts for the subcmd set them here, see cmds/get.go
-	// pushGetCmdCLIOptsToGlobs() for an example.  Note that "persistent" opts
-	// are set in cmds/dvln.go, only opts specific to 'dvln version' would go
-	// here and there currently are none
 }
 
 // version is the function executed by 'dvln version' assuming all opts are

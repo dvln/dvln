@@ -40,44 +40,30 @@ func init() {
 
 // setupGetCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg CLI
 // options available to this subcommand (other options were already set up in
-// the "parent" dvln subcommand in a like-named method, every subcommand has
-// a like named method "setup<subcmd>CmdCLIArgs()"
+// the "parent" dvln subcommand in a like-named method). Every subcommand has
+// a like named method "setup<subcmd>CmdCLIArgs()", called in init() above and
+// called from dvln.go
 func setupGetCmdCLIArgs(reloadCLIFlags bool) {
 	var desc string
 	if reloadCLIFlags {
 		getCmd.Flags().SetDefValueReparseOK(true)
 	}
 	desc, _, _ = globs.Desc("codebase")
-	getCmd.Flags().StringVarP(&cliCodeBase, "codebase", "c", globs.GetString("codebase"), desc)
+	getCmd.Flags().StringP("codebase", "c", globs.GetString("codebase"), desc)
 	desc, _, _ = globs.Desc("devline")
-	getCmd.Flags().StringVarP(&cliDevLine, "devline", "d", globs.GetString("devline"), desc)
+	getCmd.Flags().StringP("devline", "d", globs.GetString("devline"), desc)
 	desc, _, _ = globs.Desc("pkg")
-	getCmd.Flags().StringVarP(&cliPkg, "pkg", "p", globs.GetString("pkg"), desc)
+	getCmd.Flags().StringP("pkg", "p", globs.GetString("pkg"), desc)
 	desc, _, _ = globs.Desc("wkspcdir")
-	getCmd.Flags().StringVarP(&cliWkspcDir, "wkspcdir", "w", globs.GetString("wkspcdir"), desc)
+	getCmd.Flags().StringP("wkspcdir", "w", globs.GetString("wkspcdir"), desc)
 	getCmd.Run = get
+	// NewCLIOpts: if there were opts for the subcmd set them here and note that
+	// "persistent" opts are set in cmds/dvln.go, only opts specific to the
+	// 'dvln get' subcommand are set here
+	// Note that you'll need to modify cmds/global.go as well otherwise your
+	// globs.Desc() call and globs.GetBool("myopt") will not work.
 	if reloadCLIFlags {
 		getCmd.Flags().SetDefValueReparseOK(false)
-	}
-}
-
-// pushGetCmdCLIOptsToGlobs shoves any user set CLI options into the 'globs'
-// (viper) package if it was used on the CLI (so viper has a full picture
-// of all variables, their defaults, any env settings, and now any CLI
-// settings as well (amongst other settings)
-func pushGetCmdCLIOptsToGlobs() {
-	// local flags for get subcmd bootstrapped here
-	if getCmd.Flags().Lookup("codebase").Changed {
-		globs.Set("codebase", cliCodeBase)
-	}
-	if getCmd.Flags().Lookup("devline").Changed {
-		globs.Set("devline", cliDevLine)
-	}
-	if getCmd.Flags().Lookup("pkg").Changed {
-		globs.Set("pkg", cliPkg)
-	}
-	if getCmd.Flags().Lookup("wkspcdir").Changed {
-		globs.Set("wkspcdir", cliWkspcDir)
 	}
 }
 
@@ -87,8 +73,10 @@ func pushGetCmdCLIOptsToGlobs() {
 func get(cmd *cli.Command, args []string) {
 	out.Debugln("Initialization done, firing up get()")
 	out.Println("Look up codebase")
-	codebase := cmd.Flags().Lookup("codebase").Value.String()
+	//codebase := cmd.Flags().Lookup("codebase").Value.String()
+	codebase := globs.GetString("codebase")
 	out.Println("Look up devline")
-	devline := cmd.Flags().Lookup("devline").Value.String()
+	//devline := cmd.Flags().Lookup("devline").Value.String()
+	devline := globs.GetString("devline")
 	out.Printf("Getting packages from codebase %s, devline %s\n", codebase, devline)
 }

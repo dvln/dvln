@@ -47,7 +47,7 @@ import (
 //       and not have to use globs.Set() to push them into globs/viper, ugh)
 func initPkgGlobs() {
 	// Note: if you want aliases for keys you can add them like so, note
-	//       that globs (viper) is "case independent" so Taxonomies and
+	//       that "globs" (viper) is "case independent" so Taxonomies and
 	//       taxonomies are identical as far as 'globs' is concerned
 
 	// globs.SetDefault("Taxonomies", map[string]string{"tag": "tags", "category": "categories"})
@@ -68,14 +68,23 @@ func initPkgGlobs() {
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
-	globs.SetDefault("logfileLevel", int(out.LevelInfo)) // default (if activate)
-	globs.SetDesc("logfileLevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDefault("logfilelevel", int(out.LevelInfo)) // default (if activate)
+	globs.SetDesc("logfilelevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
 
-	globs.SetDefault("screenLevel", int(out.LevelInfo)) // default print lvl
-	globs.SetDesc("screenLevel", "screen output level", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDefault("screenlevel", int(out.LevelInfo)) // default print lvl
+	globs.SetDesc("screenlevel", "screen output level", globs.ExpertUser, globs.BasicGlobal)
 
 	// Section: CLIGlobal class options, vars that can come in from the CLI
 	// - please add them alphabetically and don't reuse existing opts/vars
+	//
+	// NewCLIOpts: if there were opts for the dvln meta-command or subcmds you
+	// would define their starting default value and meta-data below.  Note that
+	// for CLI opts you would need the last field to be something like the one
+	// in the section below (globs.CLIGlobal) or some other scope that indicates
+	// they can be set via the CLI (which is what the below "block" is for, but
+	// if yours is special and maybe can't be set in the config file or
+	// something special like that you might need another block to put em in).
+	// Please add things alphabetically within the appropriate section.
 	globs.SetDefault("analysis", false)
 	globs.SetDesc("analysis", "memory and timing analytics", globs.ExpertUser, globs.CLIGlobal)
 
@@ -86,7 +95,7 @@ func initPkgGlobs() {
 	globs.SetDesc("config", "file|path, path scans cfg.json|toml|yml", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("debug", false)
-	globs.SetDesc("debug", "control debug output", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("debug", "control debug output", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("devline", "") // no default devline to start with
 	globs.SetDesc("devline", "development line name", globs.NoviceUser, globs.CLIGlobal)
@@ -97,8 +106,11 @@ func initPkgGlobs() {
 	globs.SetDefault("force", false) // fail on dangerous ops
 	globs.SetDesc("force", "force bypass of protections", globs.ExpertUser, globs.CLIGlobal)
 
+	globs.SetDefault("globs", "") // show available cfg|env settings to user
+	globs.SetDesc("globs", "valid settings, cfg|env", globs.ExpertUser, globs.CLIGlobal)
+
 	globs.SetDefault("interact", false) // the default is no user prompting
-	globs.SetDesc("interact", "prompting control", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("interact", "prompting control", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("jobs", "all") // default: use all CPU's
 	globs.SetDesc("jobs", "# of CPU's to use for jobs", globs.ExpertUser, globs.CLIGlobal)
@@ -113,7 +125,7 @@ func initPkgGlobs() {
 	globs.SetDesc("port", "port # for --serve mode", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("quiet", false) // normal output to start
-	globs.SetDesc("quiet", "silent running", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("quiet", "silent running", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("record", "off") // no output log to start
 	globs.SetDesc("record", "log to file or 'tmp'", globs.NoviceUser, globs.CLIGlobal)
@@ -122,16 +134,17 @@ func initPkgGlobs() {
 	globs.SetDesc("serve", "activate REST serve mode", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("terse", false) // regular non-terse mode
-	globs.SetDesc("terse", "output brevity", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("terse", "output brevity", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("verbose", false) // not verbose to start
-	globs.SetDesc("verbose", "output verbosity, extends debug", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("verbose", "output verbosity, extends debug", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("version", false)
-	globs.SetDesc("version", "show tool version details", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("version", "show tool version details", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("wkspcdir", ".") // assume current dir is where workspace is
-	globs.SetDesc("wkspcdir", "workspace directory", globs.NormalUser, globs.CLIGlobal)
+	globs.SetDesc("wkspcdir", "workspace directory", globs.StandardUser, globs.CLIGlobal)
 
 	// Section: <add more sections as needed>
+
 }
