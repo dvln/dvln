@@ -107,7 +107,7 @@ func initPkgGlobs() {
 	globs.SetDesc("force", "force bypass of protections", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("globs", "") // show available cfg|env settings to user
-	globs.SetDesc("globs", "valid settings, cfg|env", globs.ExpertUser, globs.CLIGlobal)
+	globs.SetDesc("globs", "show settings available, cfg|env", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("interact", false) // the default is no user prompting
 	globs.SetDesc("interact", "prompting control", globs.StandardUser, globs.CLIGlobal)

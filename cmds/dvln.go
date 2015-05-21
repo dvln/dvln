@@ -18,6 +18,7 @@ package cmds
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -166,7 +167,7 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 	desc, _, _ = globs.Desc("interact")
 	dvlnCmd.PersistentFlags().BoolP("interact", "i", globs.GetBool("interact"), desc)
 	desc, _, _ = globs.Desc("jobs")
-	dvlnCmd.PersistentFlags().StringP("jobs", "j", globs.GetString("Jobs"), desc)
+	dvlnCmd.PersistentFlags().StringP("jobs", "J", globs.GetString("Jobs"), desc)
 	desc, _, _ = globs.Desc("look")
 	dvlnCmd.PersistentFlags().StringP("look", "L", globs.GetString("Look"), desc)
 	desc, _, _ = globs.Desc("quiet")
@@ -302,20 +303,36 @@ func scanUserConfigFile() {
 	globs.ReadInConfig()
 }
 
+// currentCmd is a package globs that will be 'dvln' if no subcommand was
+// used, else it will be the subcommand, so if 'dvln get ..' then it'll be get'
+var currentCmd string
+
 // pushCLIOptsToGlobs is a bit of a hack, basically it "hacks" the 'cli' (cobra)
 // package and the 'flag' (pflags) package under it to pre-scan and parse
-// all CLI arguments.  For the dvlnCmd meta-cmd and all subcommands it
-// essentially, recursively, tells the current *cli.Command flags (pflags)
-// package to ignore errors and to go ahead and find the flags (given the
-// cli args, ie: remove subcommands and leave behind flags of interest) and
-// to parse those flags (ParseFlags) as well as it can and then to bind
-// those flags into the 'globs' (viper) package as well...
-func pushCLIOptsToGlobs(c *cli.Command) {
+// all CLI arguments.  For the dvlnCmd meta-cmd and any subcmd used it will
+// do a 'cli' (cobra) package Find() and ParseFlags() on them in a "special"
+// ignore bad flags mode.  The idea is that if the user turns on debugging
+// and perhaps asks to record output to a tmp log file, even if given with
+// other invalid options, we want to accept those good options and shove them
+// into the 'globs' (viper) package... but we do want to catch a bad subcmd
+// name here (so we catch certain classes of error, yes).
+func pushCLIOptsToGlobs(c *cli.Command, recursing bool) {
 	var args []string
 	args = os.Args[1:]
 	currErrHndl := c.Flags().ErrorHandling()
 	c.Flags().SetErrorHandling(flag.IgnoreError)
-	_, flags, _ := c.Find(args)
+	cmd, flags, err := c.Find(args)
+	if err != nil && !recursing {
+		// If this is the 1st pass on the top level dvlnCmd object (not the
+		// subcommand getCmd or versionCmd objects) and if we are ignore flag
+		// errors (as above) then any error coming back from Find will be from
+		// non-flag issues (eg: bad subcommand name), will fail here if so:
+		out.Issuef("Unable to parse command line: %s\n", err)
+		out.IssueExitf(-1, "Please run 'dvln help' for usage\n")
+	}
+	if currentCmd == "" {
+		currentCmd = cmd.Name()
+	}
 	c.ParseFlags(flags)
 	// Scan all flags to see what was used on CLI, shove ONLY those into 'globs'
 	// so pflags and overrides for cmdline flags are set only for CLI"s used
@@ -323,7 +340,9 @@ func pushCLIOptsToGlobs(c *cli.Command) {
 	c.Flags().SetErrorHandling(currErrHndl)
 	if c.HasSubCommands() {
 		for _, s := range c.Commands() {
-			pushCLIOptsToGlobs(s)
+			if currentCmd != "" && s.Name() == currentCmd {
+				pushCLIOptsToGlobs(s, true)
+			}
 		}
 	}
 }
@@ -435,7 +454,8 @@ func prepCLIArgs() {
 	// "ignore errors" pass at parsing the CLI flags and shoving any valid
 	// flags into the "globs" (viper) package.  What could go wrong?  ;)
 	if len(os.Args) != 1 {
-		pushCLIOptsToGlobs(dvlnCmd)
+		recursing := false // first top-level pass, not yet recursing
+		pushCLIOptsToGlobs(dvlnCmd, recursing)
 	}
 
 	// Do an early output level adjustment in case CLI opts are used that will
@@ -504,14 +524,22 @@ func dvlnFinalPrep() {
 	if globs.ConfigFileUsed() != "" {
 		out.Debugln("Used config file:", globs.ConfigFileUsed())
 	}
+	cmdName := " [subcmd]"
+	if currentCmd != "" {
+		if currentCmd == dvlnCmd.Root().Name() {
+			cmdName = ""
+		} else {
+			cmdName = " " + currentCmd
+		}
+	}
 
 	// Honor the parallel jobs setting (-j, --jobs, cfg file setting Jobs or env
 	// var DVLN_JOBS can all control this), identifies # of CPU's to use.
 	numCPU := runtime.NumCPU()
 	if jobs := globs.GetString("jobs"); jobs != "" && jobs != "all" {
 		if _, err := strconv.Atoi(jobs); err != nil {
-			out.Issuef("Jobs value should be a number or 'all', \"%s\" was given\n", jobs)
-			out.IssueExitln(-1, "Please run 'dvln [subcmd] --help' for usage")
+			out.Issuef("Jobs value should be a number or 'all', found: %s\n", jobs)
+			out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
 		}
 		numJobs := cast.ToInt(jobs)
 		if numJobs > numCPU {
@@ -547,10 +575,21 @@ func dvlnFinalPrep() {
 	// via the 'out.Trace*()' calls run within the given method:
 	globs.Debug()
 
-	// If the client asks for "globs"/config settings, dump them:
-	if globsCLI := globs.GetString("globs"); globsCLI == "env" || globsCLI == "cfg" {
-		//eriknow... need to implement this:
-		str := globs.GetConfig(globsCLI)
+	globsCLI := globs.GetString("globs")
+	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" {
+		out.Issuef("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
+		out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
+	}
+	// If the client asks for user available "globs" settable via env or cfgfile
+	if globsCLI == "env" || globsCLI == "cfg" {
+		str := fmt.Sprintf("%v", globs.GetSingleton())
+		var err error
+		if look == "json" {
+			str, err = lib.PrettyJSON([]byte(str))
+			if err != nil {
+				out.Fatalln("Unable to beautify JSON output, error:", err)
+			}
+		}
 		out.Print(str)
 		os.Exit(0)
 	}
