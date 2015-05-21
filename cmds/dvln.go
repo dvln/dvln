@@ -308,21 +308,27 @@ func scanUserConfigFile() {
 var currentCmd string
 
 // pushCLIOptsToGlobs is a bit of a hack, basically it "hacks" the 'cli' (cobra)
-// package and the 'flag' (pflags) package under it to pre-scan and parse
-// all CLI arguments.  For the dvlnCmd meta-cmd and any subcmd used it will
-// do a 'cli' (cobra) package Find() and ParseFlags() on them in a "special"
-// ignore bad flags mode.  The idea is that if the user turns on debugging
+// package and the 'flag' (pflags) package under it to be able to pre-scan and
+// parse all CLI args.  For the dvlnCmd meta-cmd and any subcmd used it will
+// do a 'cli' (cobra) package Find() and ParseFlags() on them in a special
+// "ignore bad flags" mode.  The idea is that if the user turns on debugging
 // and perhaps asks to record output to a tmp log file, even if given with
 // other invalid options, we want to accept those good options and shove them
-// into the 'globs' (viper) package... but we do want to catch a bad subcmd
-// name here (so we catch certain classes of error, yes).
-func pushCLIOptsToGlobs(c *cli.Command, recursing bool) {
+// into the 'globs' (viper) package so we can kick on debugging and such as
+// early as possible.  Note that we do choose to catch some 'cli' pkg errors
+// here not related to flags (eg: a bad subcommand name used on the CLI).
+func pushCLIOptsToGlobs(c *cli.Command, topCmd bool) {
 	var args []string
 	args = os.Args[1:]
 	currErrHndl := c.Flags().ErrorHandling()
+
+	// Tell the pflags package (used by 'cli') to ignore bad flags for this
+	// early pass of flag parsing, the dvlnCmd.Execute() call will catch those
 	c.Flags().SetErrorHandling(flag.IgnoreError)
+
+	// Parse the CLI args into likely subcmd, flags given and any errors found:
 	cmd, flags, err := c.Find(args)
-	if err != nil && !recursing {
+	if err != nil && topCmd {
 		// If this is the 1st pass on the top level dvlnCmd object (not the
 		// subcommand getCmd or versionCmd objects) and if we are ignore flag
 		// errors (as above) then any error coming back from Find will be from
@@ -330,20 +336,23 @@ func pushCLIOptsToGlobs(c *cli.Command, recursing bool) {
 		out.Issuef("Unable to parse command line: %s\n", err)
 		out.IssueExitf(-1, "Please run 'dvln help' for usage\n")
 	}
+	// For nice errors lets stash either 'dvln' or, if a subcommand was used,
+	// into the 'currentCmd' unexported package global so we know what the user
+	// is running and can work (and error) with respect to that
 	if currentCmd == "" {
 		currentCmd = cmd.Name()
 	}
 	c.ParseFlags(flags)
-	// Scan all flags to see what was used on CLI, shove ONLY those into 'globs'
-	// so pflags and overrides for cmdline flags are set only for CLI"s used
+	// Scan all flags to see what was used on CLI, shove ONLY used flags into
+	// the 'globs' (viper) pkg so it's pflags and overide config levels focus
+	// just on those CLI options actually used (I prefer that personally)
 	globs.SetPFlags(c.Flags())
 	c.Flags().SetErrorHandling(currErrHndl)
-	if c.HasSubCommands() {
-		for _, s := range c.Commands() {
-			if currentCmd != "" && s.Name() == currentCmd {
-				pushCLIOptsToGlobs(s, true)
-			}
-		}
+	// if running 'dvln <subcmd> ..' we'll also scan the <subcmd> args here
+	// recursively, but if just 'dvln ..' with no subcmd then no need
+	if c.HasSubCommands() && cmd.Name() != c.Root().Name() {
+		topCmd = false // this is a subcmd, not the top 'dvln' cmd any longer
+		pushCLIOptsToGlobs(cmd, topCmd)
 	}
 }
 
@@ -454,8 +463,8 @@ func prepCLIArgs() {
 	// "ignore errors" pass at parsing the CLI flags and shoving any valid
 	// flags into the "globs" (viper) package.  What could go wrong?  ;)
 	if len(os.Args) != 1 {
-		recursing := false // first top-level pass, not yet recursing
-		pushCLIOptsToGlobs(dvlnCmd, recursing)
+		topCmd := true // passing in the top level cmd obj at this point, yes
+		pushCLIOptsToGlobs(dvlnCmd, topCmd)
 	}
 
 	// Do an early output level adjustment in case CLI opts are used that will
