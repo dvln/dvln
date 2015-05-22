@@ -362,7 +362,8 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool) {
 func adjustOutLevels() {
 	// Set screen output threshold (defaults to LevelInfo which is the 'out'
 	// pkg default already, but someone can change the level now via cfg/env)
-	out.SetThreshold(out.Level(globs.GetInt("screenlevel")), out.ForScreen)
+	out.SetThreshold(out.LevelString2Level(globs.GetString("screenlevel")), out.ForScreen)
+
 	// Note: for all of the below threshold settings the use of ForBoth means
 	//       both screen and logfile output will be set at the given 'out' pkg
 	//       levels, keep in mind that log file defaults to the writer
@@ -450,7 +451,7 @@ func adjustOutLevels() {
 		currThresh := out.Threshold(out.ForLogfile)
 		if currThresh == out.LevelDiscard {
 			// if no threshold level set yet start with LevelInfo
-			out.SetThreshold(out.Level(globs.GetInt("logfilelevel")), out.ForLogfile)
+			out.SetThreshold(out.LevelString2Level(globs.GetString("logfilelevel")), out.ForLogfile)
 		}
 	}
 }

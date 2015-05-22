@@ -19,6 +19,8 @@
 package cmds
 
 import (
+	"fmt"
+
 	"github.com/dvln/out"
 	globs "github.com/spf13/viper"
 )
@@ -68,10 +70,10 @@ func initPkgGlobs() {
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
-	globs.SetDefault("logfilelevel", int(out.LevelInfo)) // default (if activate)
+	globs.SetDefault("logfilelevel", fmt.Sprintf("%s", out.LevelInfo)) // default log lvl (if activate)
 	globs.SetDesc("logfilelevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
 
-	globs.SetDefault("screenlevel", int(out.LevelInfo)) // default print lvl
+	globs.SetDefault("screenlevel", fmt.Sprintf("%s", out.LevelInfo)) // default print lvl
 	globs.SetDesc("screenlevel", "screen output level", globs.ExpertUser, globs.BasicGlobal)
 
 	// Section: CLIGlobal class options, vars that can come in from the CLI
@@ -134,7 +136,7 @@ func initPkgGlobs() {
 	globs.SetDesc("serve", "activate REST serve mode", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("terse", false) // regular non-terse mode
-	globs.SetDesc("terse", "output brevity", globs.StandardUser, globs.CLIGlobal)
+	globs.SetDesc("terse", "output reduction", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("verbose", false) // not verbose to start
 	globs.SetDesc("verbose", "output verbosity, extends debug", globs.StandardUser, globs.CLIGlobal)
