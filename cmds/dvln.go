@@ -27,6 +27,7 @@ import (
 
 	"github.com/dvln/lib"
 	"github.com/dvln/out"
+	"github.com/kr/pretty"
 	"github.com/spf13/cast"
 	cli "github.com/spf13/cobra"
 	analysis "github.com/spf13/nitro"
@@ -387,29 +388,34 @@ func adjustOutLevels() {
 	}
 
 	// Handle a few special case settings: pkg 'out' is low level and allows
-	// for an env to tweak it's flags (output line metadata augmentation) on
-	// the fly... so we'll let special DVLN env settings control that.  Note
-	// that normally you would *NOT* want to do a hack like this, instead you
+	// for some env's and some API's to tweak it's settings (output line indent
+	// and metadata augmentation), so we'll handle both the API's and the
+	// env settings so that appropriate 'dvln' top level cmd settings get
+	// pushed down into the 'out' package correctly.
+	// Note: normally you would *NOT* want to do a hack like this, instead you
 	// want to use 'globs' (viper) to store your key/values and, using that, you
 	// get free env overrides and such (but the 'out' pkg is low level enough
 	// that it can't depend upon the 'globs' config pkg (as it depends on 'out')
 	// - note that we allow a setting of "none" to be special and to mean "",
 	//   (see above DVLN_SCREEN_FLAG setting, maybe you don't want screen flags
 	//   in which case using "none" will do that but "" would not)
+	level := globs.GetInt("jsonindentlevel")
+	out.SetJSONIndentLevel(level)
+	raw := globs.GetBool("jsonraw")
+	out.SetJSONRaw(raw)
+	pfx := globs.GetString("jsonprefix")
+	out.SetJSONPrefix(pfx)
+
+	// Note: lean towards the above for future 'out' package tweaks
 	var flags string
-	if flags = os.Getenv("DVLN_SCREEN_FLAGS"); flags != "" {
+	if flags = os.Getenv("DVLN_DEBUG_SCOPE"); flags != "" {
 		if flags != "none" {
-			os.Setenv("PKG_OUT_SCREEN_FLAGS", flags)
+			os.Setenv("PKG_OUT_DEBUG_SCOPE", flags)
 		}
 	}
 	if flags = os.Getenv("DVLN_LOGFILE_FLAGS"); flags != "" {
 		if flags != "none" {
 			os.Setenv("PKG_OUT_LOGFILE_FLAGS", flags)
-		}
-	}
-	if flags = os.Getenv("DVLN_DEBUG_SCOPE"); flags != "" {
-		if flags != "none" {
-			os.Setenv("PKG_OUT_DEBUG_SCOPE", flags)
 		}
 	}
 	if flags = os.Getenv("DVLN_NONZERO_EXIT_STRACKTRACE"); flags != "" {
@@ -422,7 +428,23 @@ func adjustOutLevels() {
 			os.Setenv("PKG_OUT_SMART_FLAGS_PREFIX", flags)
 		}
 	}
+	if flags = os.Getenv("DVLN_SCREEN_FLAGS"); flags != "" {
+		if flags != "none" {
+			os.Setenv("PKG_OUT_SCREEN_FLAGS", flags)
+		}
+	}
 
+	// Like the 'out' package init above the 'pretty' package has no
+	// dependencies on 'globs' (viper) but the reverse is true... so we
+	// need to tell the 'pretty' package how we want our formatting done
+	// (note that this honors DVLN_TEXTHUMANIZE, etc)
+	humanize := globs.GetBool("texthumanize")
+	pretty.SetHumanize(humanize)
+	level = globs.GetInt("textindentlevel")
+	pretty.SetOutputIndentLevel(level)
+	//eriknow, need to get 'textprefix' working next
+
+	// Lets handle recording of output..
 	if record := globs.GetString("record"); record != "" && record != "off" {
 		// If the user has requested recording/logging the below will set up
 		// an io.Writer for a log file (via the 'out' package).  At this point
@@ -595,7 +617,7 @@ func dvlnFinalPrep() {
 		str := fmt.Sprintf("%v", globs.GetSingleton())
 		var err error
 		if look == "json" {
-			str, err = lib.PrettyJSON([]byte(str))
+			str, err = out.PrettyJSON([]byte(str))
 			if err != nil {
 				out.Fatalln("Unable to beautify JSON output, error:", err)
 			}

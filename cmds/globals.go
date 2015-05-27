@@ -70,6 +70,24 @@ func initPkgGlobs() {
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
+	globs.SetDefault("jsonraw", false)
+	globs.SetDesc("jsonraw", "Prefer JSON in non-pretty raw format", globs.ExpertUser, globs.BasicGlobal)
+
+	globs.SetDefault("jsonindentlevel", 2)
+	globs.SetDesc("jsonindentlevel", "Override the default two space JSON indent level", globs.ExpertUser, globs.BasicGlobal)
+
+	globs.SetDefault("jsonprefix", "")
+	globs.SetDesc("jsonprefix", "Override the default empty JSON prefix string", globs.ExpertUser, globs.BasicGlobal)
+
+	globs.SetDefault("texthumanize", true)
+	globs.SetDesc("texthumanize", "Prefer human readable text, turn off for Go-like data struct", globs.ExpertUser, globs.BasicGlobal)
+
+	globs.SetDefault("textindentlevel", 2)
+	globs.SetDesc("textindentlevel", "Override the default two space text indent level", globs.ExpertUser, globs.BasicGlobal)
+
+	globs.SetDefault("textprefix", "")
+	globs.SetDesc("jsonprefix", "Override the default empty text prefix string", globs.ExpertUser, globs.BasicGlobal)
+
 	globs.SetDefault("logfilelevel", fmt.Sprintf("%s", out.LevelInfo)) // default log lvl (if activate)
 	globs.SetDesc("logfilelevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
 
