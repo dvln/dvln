@@ -86,7 +86,7 @@ func initPkgGlobs() {
 	globs.SetDesc("textindentlevel", "Override the default two space text indent level", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("textprefix", "")
-	globs.SetDesc("jsonprefix", "Override the default empty text prefix string", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("textprefix", "Override the default empty text prefix string", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("logfilelevel", fmt.Sprintf("%s", out.LevelInfo)) // default log lvl (if activate)
 	globs.SetDesc("logfilelevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)

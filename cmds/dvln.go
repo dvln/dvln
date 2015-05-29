@@ -399,12 +399,12 @@ func adjustOutLevels() {
 	// - note that we allow a setting of "none" to be special and to mean "",
 	//   (see above DVLN_SCREEN_FLAG setting, maybe you don't want screen flags
 	//   in which case using "none" will do that but "" would not)
-	level := globs.GetInt("jsonindentlevel")
-	out.SetJSONIndentLevel(level)
+	jsonLevel := globs.GetInt("jsonindentlevel")
+	out.SetJSONIndentLevel(jsonLevel)
 	raw := globs.GetBool("jsonraw")
 	out.SetJSONRaw(raw)
-	pfx := globs.GetString("jsonprefix")
-	out.SetJSONPrefix(pfx)
+	jsonPrefix := globs.GetString("jsonprefix")
+	out.SetJSONPrefix(jsonPrefix)
 
 	// Note: lean towards the above for future 'out' package tweaks
 	var flags string
@@ -440,9 +440,10 @@ func adjustOutLevels() {
 	// (note that this honors DVLN_TEXTHUMANIZE, etc)
 	humanize := globs.GetBool("texthumanize")
 	pretty.SetHumanize(humanize)
-	level = globs.GetInt("textindentlevel")
-	pretty.SetOutputIndentLevel(level)
-	//eriknow, need to get 'textprefix' working next
+	textLevel := globs.GetInt("textindentlevel")
+	pretty.SetOutputIndentLevel(textLevel)
+	textPrefixStr := globs.GetString("textprefix")
+	pretty.SetOutputPrefixStr(textPrefixStr)
 
 	// Lets handle recording of output..
 	if record := globs.GetString("record"); record != "" && record != "off" {
@@ -599,12 +600,13 @@ func dvlnFinalPrep() {
 
 	// If the developer asks for the version of the tool print that out:
 	if version := globs.GetBool("version"); version {
-		out.Println(lib.DvlnVerStr())
+		out.Print(lib.DvlnVerStr())
 		os.Exit(0)
 	}
 
-	// If trace level debug enabled this will dump the "globs" (viper) config
-	// via the 'out.Trace*()' calls run within the given method:
+	// If trace level debug enabled (checked inside the routine) this will dump
+	// the "globs" (viper) config via the 'out.Trace*()' calls run within the
+	// given method:
 	globs.Debug()
 
 	globsCLI := globs.GetString("globs")
@@ -614,15 +616,7 @@ func dvlnFinalPrep() {
 	}
 	// If the client asks for user available "globs" settable via env or cfgfile
 	if globsCLI == "env" || globsCLI == "cfg" {
-		str := fmt.Sprintf("%v", globs.GetSingleton())
-		var err error
-		if look == "json" {
-			str, err = out.PrettyJSON([]byte(str))
-			if err != nil {
-				out.Fatalln("Unable to beautify JSON output, error:", err)
-			}
-		}
-		out.Print(str)
+		out.Print(fmt.Sprintf("%v", globs.GetSingleton()))
 		os.Exit(0)
 	}
 }
