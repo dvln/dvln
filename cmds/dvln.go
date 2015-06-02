@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dvln/api"
 	"github.com/dvln/lib"
 	"github.com/dvln/out"
 	"github.com/kr/pretty"
@@ -115,7 +116,7 @@ func addSubCommands() {
 	//dvlnCmd.AddCommand(mvCmd) //        % dvln mv ..
 	//dvlnCmd.AddCommand(patchCmd) //     % dvln patch ..
 	//dvlnCmd.AddCommand(pushCmd) //      % dvln push ..
-	//dvlnCmd.AddCommand(pullCmd) //      % dvln pull ..
+	dvlnCmd.AddCommand(pullCmd) //        % dvln pull ..
 	//dvlnCmd.AddCommand(releaseCmd) //   % dvln release ..
 	//dvlnCmd.AddCommand(retireCmd) //    % dvln retire ..
 	//dvlnCmd.AddCommand(revertCmd) //    % dvln revert ..
@@ -400,11 +401,11 @@ func adjustOutLevels() {
 	//   (see above DVLN_SCREEN_FLAG setting, maybe you don't want screen flags
 	//   in which case using "none" will do that but "" would not)
 	jsonLevel := globs.GetInt("jsonindentlevel")
-	out.SetJSONIndentLevel(jsonLevel)
+	api.SetJSONIndentLevel(jsonLevel)
 	raw := globs.GetBool("jsonraw")
-	out.SetJSONRaw(raw)
+	api.SetJSONRaw(raw)
 	jsonPrefix := globs.GetString("jsonprefix")
-	out.SetJSONPrefix(jsonPrefix)
+	api.SetJSONPrefix(jsonPrefix)
 
 	// Note: lean towards the above for future 'out' package tweaks
 	var flags string
@@ -534,6 +535,7 @@ func reloadCLIDefaults() {
 	reloadCLIFlags := true
 	setupDvlnCmdCLIArgs(reloadCLIFlags)
 	setupGetCmdCLIArgs(reloadCLIFlags)
+	setupPullCmdCLIArgs(reloadCLIFlags)
 	setupVersionCmdCLIArgs(reloadCLIFlags)
 	// NewSubCommand: If you add a new subcommand you need to add a method to
 	//     that subcommand named like what's above, see cmds/get.go for the
