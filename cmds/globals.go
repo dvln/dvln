@@ -71,22 +71,22 @@ func initPkgGlobs() {
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
 	globs.SetDefault("jsonraw", false)
-	globs.SetDesc("jsonraw", "Prefer JSON in non-pretty raw format", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("jsonraw", "prefer JSON in non-pretty raw format", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("jsonindentlevel", 2)
-	globs.SetDesc("jsonindentlevel", "Override the default two space JSON indent level", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("jsonindentlevel", "override the default two space JSON indent level", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("jsonprefix", "")
-	globs.SetDesc("jsonprefix", "Override the default empty JSON prefix string", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("jsonprefix", "override the default empty JSON prefix string", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("texthumanize", true)
-	globs.SetDesc("texthumanize", "Prefer human readable text, turn off for Go-like data struct", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("texthumanize", "prefer human readable text, turn off for Go-like data struct", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("textindentlevel", 2)
-	globs.SetDesc("textindentlevel", "Override the default two space text indent level", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("textindentlevel", "override the default two space text indent level", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("textprefix", "")
-	globs.SetDesc("textprefix", "Override the default empty text prefix string", globs.ExpertUser, globs.BasicGlobal)
+	globs.SetDesc("textprefix", "override the default empty text prefix string", globs.ExpertUser, globs.BasicGlobal)
 
 	globs.SetDefault("logfilelevel", fmt.Sprintf("%s", out.LevelInfo)) // default log lvl (if activate)
 	globs.SetDesc("logfilelevel", "log file output level (used if logging on)", globs.ExpertUser, globs.BasicGlobal)
@@ -105,6 +105,7 @@ func initPkgGlobs() {
 	// if yours is special and maybe can't be set in the config file or
 	// something special like that you might need another block to put em in).
 	// Please add things alphabetically within the appropriate section.
+	// - note: currently this contains CLIGlobal and CLIOnlyGlobal type flags
 	globs.SetDefault("analysis", false)
 	globs.SetDesc("analysis", "memory and timing analytics", globs.ExpertUser, globs.CLIGlobal)
 
@@ -127,7 +128,7 @@ func initPkgGlobs() {
 	globs.SetDesc("force", "force bypass of protections", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("globs", "") // show available cfg|env settings to user
-	globs.SetDesc("globs", "show settings available, cfg|env", globs.ExpertUser, globs.CLIGlobal)
+	globs.SetDesc("globs", "show settings available, cfg|env", globs.ExpertUser, globs.CLIOnlyGlobal)
 
 	globs.SetDefault("interact", false) // the default is no user prompting
 	globs.SetDesc("interact", "prompting control", globs.StandardUser, globs.CLIGlobal)
@@ -139,7 +140,7 @@ func initPkgGlobs() {
 	globs.SetDesc("look", "output look, text|json", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("pkg", "") // no default package(s) to start with
-	globs.SetDesc("pkg", "package selector, comma separated", globs.NoviceUser, globs.CLIGlobal)
+	globs.SetDesc("pkg", "package selector, comma separated", globs.NoviceUser, globs.CLIOnlyGlobal)
 
 	globs.SetDefault("port", 3856) // port when serving
 	globs.SetDesc("port", "port # for --serve mode", globs.ExpertUser, globs.CLIGlobal)
@@ -160,7 +161,7 @@ func initPkgGlobs() {
 	globs.SetDesc("verbose", "output verbosity, extends debug", globs.StandardUser, globs.CLIGlobal)
 
 	globs.SetDefault("version", false)
-	globs.SetDesc("version", "show tool version details", globs.StandardUser, globs.CLIGlobal)
+	globs.SetDesc("version", "show tool version details", globs.StandardUser, globs.CLIOnlyGlobal)
 
 	globs.SetDefault("wkspcdir", ".") // assume current dir is where workspace is
 	globs.SetDesc("wkspcdir", "workspace directory", globs.StandardUser, globs.CLIGlobal)

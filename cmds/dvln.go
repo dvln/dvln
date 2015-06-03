@@ -400,13 +400,6 @@ func adjustOutLevels() {
 	// - note that we allow a setting of "none" to be special and to mean "",
 	//   (see above DVLN_SCREEN_FLAG setting, maybe you don't want screen flags
 	//   in which case using "none" will do that but "" would not)
-	jsonLevel := globs.GetInt("jsonindentlevel")
-	api.SetJSONIndentLevel(jsonLevel)
-	raw := globs.GetBool("jsonraw")
-	api.SetJSONRaw(raw)
-	jsonPrefix := globs.GetString("jsonprefix")
-	api.SetJSONPrefix(jsonPrefix)
-
 	// Note: lean towards the above for future 'out' package tweaks
 	var flags string
 	if flags = os.Getenv("DVLN_DEBUG_SCOPE"); flags != "" {
@@ -434,6 +427,13 @@ func adjustOutLevels() {
 			os.Setenv("PKG_OUT_SCREEN_FLAGS", flags)
 		}
 	}
+
+	jsonLevel := globs.GetInt("jsonindentlevel")
+	api.SetJSONIndentLevel(jsonLevel)
+	raw := globs.GetBool("jsonraw")
+	api.SetJSONRaw(raw)
+	jsonPrefix := globs.GetString("jsonprefix")
+	api.SetJSONPrefix(jsonPrefix)
 
 	// Like the 'out' package init above the 'pretty' package has no
 	// dependencies on 'globs' (viper) but the reverse is true... so we

@@ -65,5 +65,5 @@ func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
 // selected (eg: terse, regular, verbose with text or json as the "look")
 func version(cmd *cli.Command, args []string) {
 	dvlnVerStr := lib.DvlnVerStr()
-	out.Println(dvlnVerStr)
+	out.Print(dvlnVerStr)
 }
