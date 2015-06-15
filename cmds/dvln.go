@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -267,10 +268,47 @@ func Execute() {
 		out.Exit(-1)
 	}
 	// If any output remains from the cli (cobra) pkg dump it here (eg: usage)
+	look := globs.GetString("look")
+	jsonDumped := false
 	if anyOutput != "" {
-		out.Print(anyOutput)
+		help := globs.GetBool("help")
+		if help && look == "json" {
+			type helpStruct struct {
+				HelpMsg   string `json:"helpMsg"`
+				RecordLog string `json:"recordLog,omitempty"`
+				UserID    string `json:"userId,omitempty"`
+			}
+			fields := make([]string, 0, 0)
+			items := make([]interface{}, 0, 0)
+			var usage helpStruct
+			usage.HelpMsg = anyOutput
+			fields = append(fields, "helpMsg")
+			if recTgt := globs.GetString("record"); recTgt != "" {
+				//eriknow, see why 'tmp' isn't working correctly with record,
+				//         gets tmp path into override[] settings but the
+				//         GetString isn't grabbing that, it's grabbing "tmp"
+				//         both here and below when printing out the record file
+				usage.RecordLog = recTgt
+				fields = append(fields, "recordLog")
+				user, err := user.Current()
+				if err == nil {
+					usage.UserID = user.Username
+					fields = append(fields, "userId")
+				}
+			}
+			items = append(items, &usage)
+			output, fatalProblem := api.GetJSONString(globs.GetString("apiver"), "dvlnHelp", "usage", "regular", fields, items)
+			if fatalProblem {
+				out.Print(output)
+				out.Exit(-1)
+			}
+			out.Print(output)
+			jsonDumped = true
+		} else {
+			out.Print(anyOutput)
+		}
 	}
-	if tmpLogfileUsed {
+	if tmpLogfileUsed && !jsonDumped {
 		out.Noteln("Temp output logfile:", globs.GetString("record"))
 	}
 	Timer.Step("cmds.Execute(): complete")
@@ -454,9 +492,11 @@ func adjustOutLevels() {
 		// matches the default screen output setting
 		//		out.SetThreshold(out.LevelInfo, out.ForLogfile)
 		if record == "temp" || record == "tmp" {
-			tmpLogfileUsed = true
-			record = out.UseTempLogFile("dvln.")
-			globs.Set("Record", record)
+			if !tmpLogfileUsed {
+				tmpLogfileUsed = true
+				record = out.UseTempLogFile("dvln.")
+				globs.Set("record", record)
+			}
 		} else {
 			origRecord := record
 			out.SetLogFile(globs.AbsPathify(record))
