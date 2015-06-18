@@ -29,12 +29,12 @@ import (
 	"github.com/dvln/api"
 	"github.com/dvln/lib"
 	"github.com/dvln/out"
-	"github.com/kr/pretty"
-	"github.com/spf13/cast"
-	cli "github.com/spf13/cobra"
-	analysis "github.com/spf13/nitro"
-	flag "github.com/spf13/pflag"
-	globs "github.com/spf13/viper"
+	"github.com/dvln/pretty"
+	"github.com/dvln/cast"
+	cli "github.com/dvln/cobra"
+	analysis "github.com/dvln/nitro"
+	flag "github.com/dvln/pflag"
+	globs "github.com/dvln/viper"
 )
 
 // dvlnCmd is dvln's root command. Every other command attached to dvlnCmd

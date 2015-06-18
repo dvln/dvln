@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	"github.com/dvln/out"
-	globs "github.com/spf13/viper"
+	globs "github.com/dvln/viper"
 )
 
 // initPkgGlobs sets up default settings for any variables used

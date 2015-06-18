@@ -17,8 +17,8 @@ package cmds
 
 import (
 	"github.com/dvln/out"
-	cli "github.com/spf13/cobra"
-	globs "github.com/spf13/viper"
+	cli "github.com/dvln/cobra"
+	globs "github.com/dvln/viper"
 )
 
 var getCmd = &cli.Command{

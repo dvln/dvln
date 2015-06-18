@@ -16,7 +16,7 @@ package cmds
 import (
 	"github.com/dvln/lib"
 	"github.com/dvln/out"
-	cli "github.com/spf13/cobra"
+	cli "github.com/dvln/cobra"
 )
 
 var versionCmd = &cli.Command{

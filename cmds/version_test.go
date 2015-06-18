@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"testing"
 
-	globs "github.com/spf13/viper"
+	globs "github.com/dvln/viper"
 )
 
 func TestVersion(t *testing.T) {
