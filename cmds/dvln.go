@@ -27,13 +27,13 @@ import (
 	"strings"
 
 	"github.com/dvln/api"
-	"github.com/dvln/lib"
-	"github.com/dvln/out"
-	"github.com/dvln/pretty"
 	"github.com/dvln/cast"
 	cli "github.com/dvln/cobra"
+	"github.com/dvln/lib"
 	analysis "github.com/dvln/nitro"
+	"github.com/dvln/out"
 	flag "github.com/dvln/pflag"
+	"github.com/dvln/pretty"
 	globs "github.com/dvln/viper"
 )
 
@@ -218,7 +218,7 @@ func Execute() {
 	// Load up the users dvln config file (ie: ~/.dvlncfg/cfg.json|toml/yaml..).
 	// This may alter settings/configuration further so we'll again make a pass
 	// at setting up the 'out' package with any new settings:
-	scanUserCfgFile()
+	scanUserCfgAndReinit()
 
 	// Now that we've read in the CLI args and the users config file we have a
 	// full picture of the settings that will be used... now we'll take a 2nd
@@ -284,10 +284,6 @@ func Execute() {
 			usage.HelpMsg = anyOutput
 			fields = append(fields, "helpMsg")
 			if recTgt := globs.GetString("record"); recTgt != "" {
-				//eriknow, see why 'tmp' isn't working correctly with record,
-				//         gets tmp path into override[] settings but the
-				//         GetString isn't grabbing that, it's grabbing "tmp"
-				//         both here and below when printing out the record file
 				usage.RecordLog = recTgt
 				fields = append(fields, "recordLog")
 				user, err := user.Current()
@@ -495,7 +491,19 @@ func adjustOutLevels() {
 			if !tmpLogfileUsed {
 				tmpLogfileUsed = true
 				record = out.UseTempLogFile("dvln.")
+				// Here we try and override what the user gave us basically by
+				// replacing it with the actual tmp file name
 				globs.Set("record", record)
+				// Since we're replacing the CLI opt temp|tmp with the true
+				// temp file name we need to "force" globs (viper) to use the
+				// new value and not the pflags value (if Set() is used *and*
+				// that variable was used on the CLI it'll prefer the flag
+				// setting unless this little hack is done):
+				// FIXME: eventually it should be a ReplacePFlag call (or
+				// something like that) but I had some issues using
+				// flag.Value.Set() in such a routine and it not working
+				// as expected... perhaps some caching/etc, needs research.
+				globs.ClearPFlag("record")
 			}
 		} else {
 			origRecord := record
@@ -539,13 +547,13 @@ func prepCLIArgs() {
 	adjustOutLevels()
 }
 
-// scanUserCfgFile finishes updating the 'globs' (viper) pkg so that all
+// scanUserCfgAndReinit finishes updating the 'globs' (viper) pkg so that all
 // CLI opts are fully visible and the users config file data is also loaded
 // up as well, hurray!  With that data we'll also re-update dvln so that
 // output data is going to the screen and any mirror logfile at the right
 // output levels and such (and that any help screens reflect those final
 // "full" settings from all this config data)
-func scanUserCfgFile() {
+func scanUserCfgAndReinit() {
 	// Scan the users config file, if any, honoring any CLI opts that might
 	// override the location of the user config file and push those settings
 	// into the 'globs' (viper) pkg as well.  Once done the 'globs' globals will
