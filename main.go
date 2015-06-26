@@ -16,7 +16,7 @@
 package main
 
 import (
-	"dvln/cmds"
+	"github.com/dvln/dvln/cmds"
 )
 
 func main() {
