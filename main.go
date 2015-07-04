@@ -16,11 +16,13 @@
 package main
 
 import (
+	"os"
+
 	"github.com/dvln/dvln/cmds"
 )
 
 func main() {
 	// Kick off the the 'cli' mgmt package (Cobra commander) for the dvln
 	// command and the various subcommands and opts:
-	cmds.Execute()
+	cmds.Execute(os.Args)
 }

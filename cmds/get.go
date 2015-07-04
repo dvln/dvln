@@ -16,8 +16,8 @@
 package cmds
 
 import (
-	"github.com/dvln/out"
 	cli "github.com/dvln/cobra"
+	"github.com/dvln/out"
 	globs "github.com/dvln/viper"
 )
 
@@ -35,7 +35,7 @@ var getCmd = &cli.Command{
 // and initial defaults for those options and such.
 func init() {
 	reloadCLIFlags := false
-	setupGetCmdCLIArgs(reloadCLIFlags)
+	setupGetCmdCLIArgs(getCmd, reloadCLIFlags)
 }
 
 // setupGetCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg CLI
@@ -43,27 +43,27 @@ func init() {
 // the "parent" dvln subcommand in a like-named method). Every subcommand has
 // a like named method "setup<subcmd>CmdCLIArgs()", called in init() above and
 // called from dvln.go
-func setupGetCmdCLIArgs(reloadCLIFlags bool) {
+func setupGetCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	var desc string
 	if reloadCLIFlags {
-		getCmd.Flags().SetDefValueReparseOK(true)
+		c.Flags().SetDefValueReparseOK(true)
 	}
 	desc, _, _ = globs.Desc("codebase")
-	getCmd.Flags().StringP("codebase", "c", globs.GetString("codebase"), desc)
+	c.Flags().StringP("codebase", "c", globs.GetString("codebase"), desc)
 	desc, _, _ = globs.Desc("devline")
-	getCmd.Flags().StringP("devline", "d", globs.GetString("devline"), desc)
+	c.Flags().StringP("devline", "d", globs.GetString("devline"), desc)
 	desc, _, _ = globs.Desc("pkg")
-	getCmd.Flags().StringP("pkg", "p", globs.GetString("pkg"), desc)
+	c.Flags().StringP("pkg", "p", globs.GetString("pkg"), desc)
 	desc, _, _ = globs.Desc("wkspcdir")
-	getCmd.Flags().StringP("wkspcdir", "w", globs.GetString("wkspcdir"), desc)
-	getCmd.Run = get
+	c.Flags().StringP("wkspcdir", "w", globs.GetString("wkspcdir"), desc)
+	c.Run = get
 	// NewCLIOpts: if there were opts for the subcmd set them here and note that
 	// "persistent" opts are set in cmds/dvln.go, only opts specific to the
 	// 'dvln get' subcommand are set here
 	// Note that you'll need to modify cmds/global.go as well otherwise your
 	// globs.Desc() call and globs.GetBool("myopt") will not work.
 	if reloadCLIFlags {
-		getCmd.Flags().SetDefValueReparseOK(false)
+		c.Flags().SetDefValueReparseOK(false)
 	}
 }
 

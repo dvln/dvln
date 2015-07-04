@@ -55,11 +55,6 @@ For complete documentation see: http://dvln.org`,
 // Timer used by analysis code via the 'analysis' (nitro) pkg
 var Timer *analysis.B
 
-// cliPkgOut is an io.Writer used by the 'cli' (cobra) package to capture any
-// output from it so the dvln tool can dump it via the 'out' output mgmt Go pkg
-// to get the levels of data sent to the screen and optional log files.
-var cliPkgOut = new(bytes.Buffer)
-
 // tmpLogfileUsed indicates if we're using a tmp logfile to capture/mirror
 // the screen output, if so we'll want to always dump the path to that file
 // so the client knows where to find the file.
@@ -78,12 +73,12 @@ func init() {
 	// Add in the subcommands for the dvln command (get, update, ..), this
 	// will allow all CLI opts to be traversed fully in the initial loading
 	// of the CLI arguments into the 'globs' (viper) Go pkg
-	addSubCommands()
+	addSubCommands(dvlnCmd)
 
 	// Do an early pass on the CLI options, defaults may shift so this
 	// function will be called again during runtime
 	reloadCLIFlags := false
-	setupDvlnCmdCLIArgs(reloadCLIFlags)
+	setupDvlnCmdCLIArgs(dvlnCmd, reloadCLIFlags)
 
 	// Feature: for any user defined options from hooks/plugins consider how to
 	// let the 'cli' package know about them, likely via a pre-pass before one
@@ -93,41 +88,41 @@ func init() {
 
 // addSubCommands adds sub-commands to the top level dvln meta-command (dvlnCmd),
 // note that dvlnCmd has been bootstrapped via the init() method already.
-func addSubCommands() {
-	//dvlnCmd.AddCommand(accessCmd) //    % dvln access ..
-	//dvlnCmd.AddCommand(addCmd) //       % dvln add ..
-	//dvlnCmd.AddCommand(blameCmd) //     % dvln blame ..
-	//dvlnCmd.AddCommand(branchCmd) //    % dvln branch ..
-	//dvlnCmd.AddCommand(catCmd) //       % dvln cat ..
-	//dvlnCmd.AddCommand(checkCmd) //     % dvln check ..
-	//dvlnCmd.AddCommand(commitCmd) //    % dvln commit ..
-	//dvlnCmd.AddCommand(configCmd) //    % dvln config ..
-	//dvlnCmd.AddCommand(copyrightCmd) // % dvln copyright ..
-	//dvlnCmd.AddCommand(createCmd) //    % dvln create ..
-	//dvlnCmd.AddCommand(dependCmd) //    % dvln depend ..
-	//dvlnCmd.AddCommand(describeCmd) //  % dvln describe ..
-	//dvlnCmd.AddCommand(diffCmd) //      % dvln diff ..
-	//dvlnCmd.AddCommand(freezeCmd) //    % dvln freeze ..
-	dvlnCmd.AddCommand(getCmd) //         % dvln get ..
-	//dvlnCmd.AddCommand(issueCmd) //     % dvln issue ..
-	//dvlnCmd.AddCommand(logCmd) //       % dvln log ..
-	//dvlnCmd.AddCommand(manCmd) //       % dvln man ..
-	//dvlnCmd.AddCommand(mergeCmd) //     % dvln merge ..
-	//dvlnCmd.AddCommand(mirrorCmd) //    % dvln mirror ..
-	//dvlnCmd.AddCommand(mvCmd) //        % dvln mv ..
-	//dvlnCmd.AddCommand(patchCmd) //     % dvln patch ..
-	//dvlnCmd.AddCommand(pushCmd) //      % dvln push ..
-	dvlnCmd.AddCommand(pullCmd) //        % dvln pull ..
-	//dvlnCmd.AddCommand(releaseCmd) //   % dvln release ..
-	//dvlnCmd.AddCommand(retireCmd) //    % dvln retire ..
-	//dvlnCmd.AddCommand(revertCmd) //    % dvln revert ..
-	//dvlnCmd.AddCommand(rmCmd) //        % dvln rm ..
-	//dvlnCmd.AddCommand(snapshotCmd) //  % dvln snapshot ..
-	//dvlnCmd.AddCommand(statusCmd) //    % dvln status ..
-	//dvlnCmd.AddCommand(tagCmd) //       % dvln tag ..
-	//dvlnCmd.AddCommand(thawCmd) //      % dvln thaw ..
-	//dvlnCmd.AddCommand(trackCmd) //     % dvln track ..
-	dvlnCmd.AddCommand(versionCmd) //     % dvln version ..
+func addSubCommands(c *cli.Command) {
+	//c.AddCommand(accessCmd) //    % dvln access ..
+	//c.AddCommand(addCmd) //       % dvln add ..
+	//c.AddCommand(blameCmd) //     % dvln blame ..
+	//c.AddCommand(branchCmd) //    % dvln branch ..
+	//c.AddCommand(catCmd) //       % dvln cat ..
+	//c.AddCommand(checkCmd) //     % dvln check ..
+	//c.AddCommand(commitCmd) //    % dvln commit ..
+	//c.AddCommand(configCmd) //    % dvln config ..
+	//c.AddCommand(copyrightCmd) // % dvln copyright ..
+	//c.AddCommand(createCmd) //    % dvln create ..
+	//c.AddCommand(dependCmd) //    % dvln depend ..
+	//c.AddCommand(describeCmd) //  % dvln describe ..
+	//c.AddCommand(diffCmd) //      % dvln diff ..
+	//c.AddCommand(freezeCmd) //    % dvln freeze ..
+	c.AddCommand(getCmd) //         % dvln get ..
+	//c.AddCommand(issueCmd) //     % dvln issue ..
+	//c.AddCommand(logCmd) //       % dvln log ..
+	//c.AddCommand(manCmd) //       % dvln man ..
+	//c.AddCommand(mergeCmd) //     % dvln merge ..
+	//c.AddCommand(mirrorCmd) //    % dvln mirror ..
+	//c.AddCommand(mvCmd) //        % dvln mv ..
+	//c.AddCommand(patchCmd) //     % dvln patch ..
+	//c.AddCommand(pushCmd) //      % dvln push ..
+	c.AddCommand(pullCmd) //        % dvln pull ..
+	//c.AddCommand(releaseCmd) //   % dvln release ..
+	//c.AddCommand(retireCmd) //    % dvln retire ..
+	//c.AddCommand(revertCmd) //    % dvln revert ..
+	//c.AddCommand(rmCmd) //        % dvln rm ..
+	//c.AddCommand(snapshotCmd) //  % dvln snapshot ..
+	//c.AddCommand(statusCmd) //    % dvln status ..
+	//c.AddCommand(tagCmd) //       % dvln tag ..
+	//c.AddCommand(thawCmd) //      % dvln thaw ..
+	//c.AddCommand(trackCmd) //     % dvln track ..
+	c.AddCommand(versionCmd) //     % dvln version ..
 }
 
 // setupDvlnCmdCLIArgs sets up the CLI args available to the top level 'dvln'
@@ -135,9 +130,8 @@ func addSubCommands() {
 // This is used by init() to bootstrap the data and re-used later to further
 // update default value settings based on user config file settings and such.
 // Note: there are "like" funcs, eg: cmds/get.go setupGetCLIArgs for 'dvln get'
-func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
+func setupDvlnCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	var desc string
-
 	if reloadCLIFlags {
 		// this function is called multiple times, any 2nd (or 3rd) calls
 		// must set reloadCLI flags otherwise it will panic within the 'cli'
@@ -146,8 +140,8 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 		// can be added but that is, lets us say, less tested at this point.
 		// - the primary use is to reload defaults so users config file settings
 		//   are properly reflected in help screen/usage output and such
-		dvlnCmd.Flags().SetDefValueReparseOK(true)
-		dvlnCmd.PersistentFlags().SetDefValueReparseOK(true)
+		c.Flags().SetDefValueReparseOK(true)
+		c.PersistentFlags().SetDefValueReparseOK(true)
 	}
 
 	// Basic alphabetical listing of persistent flags (top and sub-level cmds),
@@ -156,31 +150,31 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 	// local only block below or possibly within a given subcommands file
 	// such as dvln/cmd/get.go for the 'dvln get' subcommand:
 	desc, _, _ = globs.Desc("analysis")
-	dvlnCmd.PersistentFlags().BoolVarP(&analysis.AnalysisOn, "analysis", "A", globs.GetBool("analysis"), desc)
+	c.PersistentFlags().BoolVarP(&analysis.AnalysisOn, "analysis", "A", globs.GetBool("analysis"), desc)
 	desc, _, _ = globs.Desc("config")
-	dvlnCmd.PersistentFlags().StringP("config", "C", globs.GetString("config"), desc)
+	c.PersistentFlags().StringP("config", "C", globs.GetString("config"), desc)
 	desc, _, _ = globs.Desc("debug")
-	dvlnCmd.PersistentFlags().BoolP("debug", "D", globs.GetBool("debug"), desc)
+	c.PersistentFlags().BoolP("debug", "D", globs.GetBool("debug"), desc)
 	desc, _, _ = globs.Desc("force")
-	dvlnCmd.PersistentFlags().BoolP("force", "f", globs.GetBool("force"), desc)
+	c.PersistentFlags().BoolP("force", "f", globs.GetBool("force"), desc)
 	desc, _, _ = globs.Desc("fatalon")
-	dvlnCmd.PersistentFlags().IntP("fatalon", "F", globs.GetInt("fatalon"), desc)
+	c.PersistentFlags().IntP("fatalon", "F", globs.GetInt("fatalon"), desc)
 	desc, _, _ = globs.Desc("globs")
-	dvlnCmd.PersistentFlags().StringP("globs", "G", globs.GetString("globs"), desc)
+	c.PersistentFlags().StringP("globs", "G", globs.GetString("globs"), desc)
 	desc, _, _ = globs.Desc("interact")
-	dvlnCmd.PersistentFlags().BoolP("interact", "i", globs.GetBool("interact"), desc)
+	c.PersistentFlags().BoolP("interact", "i", globs.GetBool("interact"), desc)
 	desc, _, _ = globs.Desc("jobs")
-	dvlnCmd.PersistentFlags().StringP("jobs", "J", globs.GetString("Jobs"), desc)
+	c.PersistentFlags().StringP("jobs", "J", globs.GetString("Jobs"), desc)
 	desc, _, _ = globs.Desc("look")
-	dvlnCmd.PersistentFlags().StringP("look", "L", globs.GetString("Look"), desc)
+	c.PersistentFlags().StringP("look", "L", globs.GetString("Look"), desc)
 	desc, _, _ = globs.Desc("quiet")
-	dvlnCmd.PersistentFlags().BoolP("quiet", "q", globs.GetBool("quiet"), desc)
+	c.PersistentFlags().BoolP("quiet", "q", globs.GetBool("quiet"), desc)
 	desc, _, _ = globs.Desc("record")
-	dvlnCmd.PersistentFlags().StringP("record", "R", globs.GetString("record"), desc)
+	c.PersistentFlags().StringP("record", "R", globs.GetString("record"), desc)
 	desc, _, _ = globs.Desc("terse")
-	dvlnCmd.PersistentFlags().BoolP("terse", "t", globs.GetBool("terse"), desc)
+	c.PersistentFlags().BoolP("terse", "t", globs.GetBool("terse"), desc)
 	desc, _, _ = globs.Desc("verbose")
-	dvlnCmd.PersistentFlags().BoolP("verbose", "v", globs.GetBool("verbose"), desc)
+	c.PersistentFlags().BoolP("verbose", "v", globs.GetBool("verbose"), desc)
 
 	// NewCLIOpts: if there were opts for the dvln meta-command only they would
 	// be added below, for persistent ops visible across all subcommands add
@@ -190,16 +184,16 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 
 	// The below opts apply *only* to the 'dvln' command itself, not subcommands
 	desc, _, _ = globs.Desc("port")
-	dvlnCmd.Flags().IntP("port", "P", globs.GetInt("Port"), desc)
+	c.Flags().IntP("port", "P", globs.GetInt("Port"), desc)
 	desc, _, _ = globs.Desc("serve")
-	dvlnCmd.Flags().BoolP("serve", "S", globs.GetBool("serve"), desc)
+	c.Flags().BoolP("serve", "S", globs.GetBool("serve"), desc)
 	desc, _, _ = globs.Desc("version")
-	dvlnCmd.Flags().BoolP("version", "V", globs.GetBool("version"), desc)
+	c.Flags().BoolP("version", "V", globs.GetBool("version"), desc)
 
-	dvlnCmd.Run = run
+	c.Run = run
 	if reloadCLIFlags {
-		dvlnCmd.Flags().SetDefValueReparseOK(false)
-		dvlnCmd.PersistentFlags().SetDefValueReparseOK(false)
+		c.Flags().SetDefValueReparseOK(false)
+		c.PersistentFlags().SetDefValueReparseOK(false)
 	}
 }
 
@@ -207,13 +201,13 @@ func setupDvlnCmdCLIArgs(reloadCLIFlags bool) {
 // configuration data (combined with init() setting up options and available
 // subcommands and such) and then kicks off the 'cli' (cobra) package to run
 // subcommands and such via the dvlnCmd.Execute() call in the routine.
-func Execute() {
+func Execute(args []string) {
 	Timer.Step("cmds.Execute(): init() complete (defaults set, subcmds added, CLI args set up)")
 
 	// Shove the CLI args into the 'globs' (viper) package before we even kick
 	// into the 'cli' package Execute() call below, allows us to turn on debug
 	// early as well as adjust the help screen to reflect opts the user has set:
-	prepCLIArgs()
+	prepCLIArgs(dvlnCmd, args)
 
 	// Load up the users dvln config file (ie: ~/.dvlncfg/cfg.json|toml/yaml..).
 	// This may alter settings/configuration further so we'll again make a pass
@@ -234,7 +228,9 @@ func Execute() {
 	// so we can set up # of CPU's to use, handle easy requests the user gives
 	// such as what version of the tool is running (-V|--version), show settings
 	// available via env or config file (--globs|-G {cfg|env}), etc.
-	dvlnFinalPrep()
+	if !dvlnFinalPrep() {
+		return
+	}
 
 	//dvlnCmd.DebugFlags() // can be useful for debugging purposes now and then
 
@@ -243,6 +239,7 @@ func Execute() {
 	// btw, indirectly controls and affects the 'pflags' package used by it).
 	// The reason we do this is so we can control all output via the 'out' pkg
 	// so we'll grab any results from 'dvlnCmd.Execute()' and dump it below:
+	var cliPkgOut = new(bytes.Buffer)
 	dvlnCmd.SetOutput(cliPkgOut)
 
 	Timer.Step("cmds.Execute(): loaded dvln user config, early setup and output prep done")
@@ -258,6 +255,7 @@ func Execute() {
 	// deal with CLI opts for debugging and verbosity and such (and recording)
 	err := dvlnCmd.Execute()
 	Timer.Step("cmds.Execute(): dvlnCmd.Execute() complete, post ops next")
+	out.Debugln("Globs (cobra) package dvlnCmd.Execute() complete")
 	anyOutput := cast.ToString(cliPkgOut)
 	if err != nil {
 		// Identify the issue..
@@ -353,17 +351,22 @@ var currentCmd string
 // into the 'globs' (viper) package so we can kick on debugging and such as
 // early as possible.  Note that we do choose to catch some 'cli' pkg errors
 // here not related to flags (eg: a bad subcommand name used on the CLI).
-func pushCLIOptsToGlobs(c *cli.Command, topCmd bool) {
-	var args []string
-	args = os.Args[1:]
+func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
+	var opts []string
+	opts = args[1:]
 	currErrHndl := c.Flags().ErrorHandling()
 
 	// Tell the pflags package (used by 'cli') to ignore bad flags for this
 	// early pass of flag parsing, the dvlnCmd.Execute() call will catch those
 	c.Flags().SetErrorHandling(flag.IgnoreError)
 
-	// Parse the CLI args into likely subcmd, flags given and any errors found:
-	cmd, flags, err := c.Find(args)
+	// Parse the CLI opts into likely subcmd, flags given and any errors found,
+	// note that c.Find() will not know about the 'help' subcmd yet (that is set
+	// up in cli.Execute() in the 'cli' (cobra) package currently) so the new
+	// ignore bad command mechanism was added as a bit of a cheat, bad cmds will
+	// be caught at cli.Execute() time regardless so no worries:
+	ignoreBadCmds := true
+	cmd, flags, err := c.Find(opts, ignoreBadCmds)
 	if err != nil && topCmd {
 		// If this is the 1st pass on the top level dvlnCmd object (not the
 		// subcommand getCmd or versionCmd objects) and if we are ignore flag
@@ -378,7 +381,9 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool) {
 	if currentCmd == "" {
 		currentCmd = cmd.Name()
 	}
+
 	c.ParseFlags(flags)
+
 	// Scan all flags to see what was used on CLI, shove ONLY used flags into
 	// the 'globs' (viper) pkg so it's pflags and overide config levels focus
 	// just on those CLI options actually used (I prefer that personally)
@@ -388,7 +393,7 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool) {
 	// recursively, but if just 'dvln ..' with no subcmd then no need
 	if c.HasSubCommands() && cmd.Name() != c.Root().Name() {
 		topCmd = false // this is a subcmd, not the top 'dvln' cmd any longer
-		pushCLIOptsToGlobs(cmd, topCmd)
+		pushCLIOptsToGlobs(cmd, topCmd, args)
 	}
 }
 
@@ -526,18 +531,22 @@ func adjustOutLevels() {
 			out.SetThreshold(out.LevelString2Level(globs.GetString("logfilelevel")), out.ForLogfile)
 		}
 	}
+	// This is mostly used for testing, not for direct use (although one can)
+	if os.Getenv("DVLN_LOGFILE_OFF") == "1" {
+		out.SetThreshold(out.LevelDiscard, out.ForLogfile)
+	}
 }
 
 // prepCLIArgs scans all CLI opts and tries to shove them into 'globs' (viper)
 // so we can then make a pass at turning on debugging, recording, etc as early
 // as possible (now) if such options are used
-func prepCLIArgs() {
+func prepCLIArgs(c *cli.Command, args []string) {
 	// Recursively traverse dvlnCmd and all subcommands and do an early
 	// "ignore errors" pass at parsing the CLI flags and shoving any valid
 	// flags into the "globs" (viper) package.  What could go wrong?  ;)
-	if len(os.Args) != 1 {
+	if len(args) != 1 {
 		topCmd := true // passing in the top level cmd obj at this point, yes
-		pushCLIOptsToGlobs(dvlnCmd, topCmd)
+		pushCLIOptsToGlobs(c, topCmd, args)
 	}
 
 	// Do an early output level adjustment in case CLI opts are used that will
@@ -581,10 +590,10 @@ func reloadCLIDefaults() {
 	// 'cli' (cobra) pkg help screen is now accurate based on the users config
 	// file settings and even CLI flags used:
 	reloadCLIFlags := true
-	setupDvlnCmdCLIArgs(reloadCLIFlags)
-	setupGetCmdCLIArgs(reloadCLIFlags)
-	setupPullCmdCLIArgs(reloadCLIFlags)
-	setupVersionCmdCLIArgs(reloadCLIFlags)
+	setupDvlnCmdCLIArgs(dvlnCmd, reloadCLIFlags)
+	setupGetCmdCLIArgs(getCmd, reloadCLIFlags)
+	setupPullCmdCLIArgs(pullCmd, reloadCLIFlags)
+	setupVersionCmdCLIArgs(versionCmd, reloadCLIFlags)
 	// NewSubCommand: If you add a new subcommand you need to add a method to
 	//     that subcommand named like what's above, see cmds/get.go for the
 	//     setupGetCmdCLIArgs() function to get an idea (so if you add the
@@ -598,8 +607,13 @@ func reloadCLIDefaults() {
 // settings and defaults, handle any "easy" opts we can, eg: show version (-V),
 // show available "global" cfg/env settings (-G), set up the number of parallel
 // CPU's to leverage (-j<#>), etc... all stuff that can happen before we kick
-// into the full 'cli' (cobra) commander package 'Execute()' method.
-func dvlnFinalPrep() {
+// into the full 'cli' (cobra) commander package 'Execute()' method.  Aside:
+// the boolean return may seem strange since false is only returned after the
+// tool should have terminated... but out.Exit() can be disabled for testing
+// purposes so if exit doesn't actually exit (PKG_OUT_NO_EXIT = 1) then we
+// want to bail outta here and let Execute() know to bail out also (strictly
+// for testing purposes is what that is used for).
+func dvlnFinalPrep() bool {
 	// (re)Dump user config file info.  Possibly dumped already from the calls
 	// within scanUserConfigFile() but, if output/logfile thresholds changed in
 	// the users config file we may have missed logging it, so dump it again as
@@ -623,6 +637,7 @@ func dvlnFinalPrep() {
 		if _, err := strconv.Atoi(jobs); err != nil {
 			out.Issuef("Jobs value should be a number or 'all', found: %s\n", jobs)
 			out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
+			return false
 		}
 		numJobs := cast.ToInt(jobs)
 		if numJobs > numCPU {
@@ -636,12 +651,14 @@ func dvlnFinalPrep() {
 	// Do some validation on the 'serve' mode:
 	if serve := globs.GetBool("serve"); serve {
 		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'")
+		return false
 	}
 
 	// Make sure that given --look|-l or cfgfile:Look or env:DVLN_LOOK are valid
 	look := globs.GetString("look")
 	if look != "text" && look != "json" {
 		out.IssueExitf(-1, "The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
+		return false
 	} else if look == "json" && globs.GetBool("interact") {
 		out.Debugln("Interactive runs are not available for the 'json' output \"look\"")
 		out.Debugln("- silently disabling interaction (client may have it set for text output)")
@@ -651,7 +668,8 @@ func dvlnFinalPrep() {
 	// If the developer asks for the version of the tool print that out:
 	if version := globs.GetBool("version"); version {
 		out.Print(lib.DvlnVerStr())
-		os.Exit(0)
+		out.Exit(0)
+		return false
 	}
 
 	// If trace level debug enabled (checked inside the routine) this will dump
@@ -660,15 +678,18 @@ func dvlnFinalPrep() {
 	globs.Debug()
 
 	globsCLI := globs.GetString("globs")
-	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" {
+	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" && globsCLI != "skip" {
 		out.Issuef("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
 		out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
+		return false
 	}
 	// If the client asks for user available "globs" settable via env or cfgfile
 	if globsCLI == "env" || globsCLI == "cfg" {
 		out.Print(fmt.Sprintf("%v", globs.GetSingleton()))
-		os.Exit(0)
+		out.Exit(0)
+		return false
 	}
+	return true
 }
 
 // run for the dvln cmd really doesn't do anything but recommend the user

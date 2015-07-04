@@ -16,8 +16,8 @@
 package cmds
 
 import (
-	"github.com/dvln/out"
 	cli "github.com/dvln/cobra"
+	"github.com/dvln/out"
 	globs "github.com/dvln/viper"
 )
 
@@ -35,7 +35,7 @@ var pullCmd = &cli.Command{
 // and initial defaults for those options and such.
 func init() {
 	reloadCLIFlags := false
-	setupPullCmdCLIArgs(reloadCLIFlags)
+	setupPullCmdCLIArgs(pullCmd, reloadCLIFlags)
 }
 
 // setupPullCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg CLI
@@ -43,25 +43,25 @@ func init() {
 // the "parent" dvln subcommand in a like-named method). Every subcommand has
 // a like named method "setup<subcmd>CmdCLIArgs()", called in init() above and
 // called from dvln.go
-func setupPullCmdCLIArgs(reloadCLIFlags bool) {
+func setupPullCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	var desc string
 	if reloadCLIFlags {
-		pullCmd.Flags().SetDefValueReparseOK(true)
+		c.Flags().SetDefValueReparseOK(true)
 	}
 	//desc, _, _ = globs.Desc("codebase")
-	//pullCmd.Flags().StringP("codebase", "c", globs.GetString("codebase"), desc)
+	//c.Flags().StringP("codebase", "c", globs.GetString("codebase"), desc)
 	desc, _, _ = globs.Desc("devline")
-	pullCmd.Flags().StringP("devline", "d", globs.GetString("devline"), desc)
+	c.Flags().StringP("devline", "d", globs.GetString("devline"), desc)
 	desc, _, _ = globs.Desc("pkg")
-	pullCmd.Flags().StringP("pkg", "p", globs.GetString("pkg"), desc)
-	pullCmd.Run = pull
+	c.Flags().StringP("pkg", "p", globs.GetString("pkg"), desc)
+	c.Run = pull
 	// NewCLIOpts: if there were opts for the subcmd set them here and note that
 	// "persistent" opts are set in cmds/dvln.go, only opts specific to the
 	// 'dvln pull' subcommand are set here
 	// Note that you'll need to modify cmds/global.go as well otherwise your
 	// globs.Desc() call and globs.GetBool("myopt") will not work.
 	if reloadCLIFlags {
-		pullCmd.Flags().SetDefValueReparseOK(false)
+		c.Flags().SetDefValueReparseOK(false)
 	}
 }
 

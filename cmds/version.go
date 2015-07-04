@@ -14,9 +14,9 @@
 package cmds
 
 import (
+	cli "github.com/dvln/cobra"
 	"github.com/dvln/lib"
 	"github.com/dvln/out"
-	cli "github.com/dvln/cobra"
 )
 
 var versionCmd = &cli.Command{
@@ -34,16 +34,16 @@ var versionCmd = &cli.Command{
 // and initial defaults for those options and such.
 func init() {
 	reloadCLIFlags := false
-	setupVersionCmdCLIArgs(reloadCLIFlags)
+	setupVersionCmdCLIArgs(versionCmd, reloadCLIFlags)
 }
 
 // setupVersionCmdCLIArgs is used from init() to set up the 'globs' (viper) pkg
 // CLI options available to this subcommand (other options were already set up
 // in the "parent" dvln subcommand in a like-named method, every subcommand has
 // a like named method "setup<subcmd>CmdCLIArgs()"
-func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
+func setupVersionCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	if reloadCLIFlags {
-		versionCmd.Flags().SetDefValueReparseOK(true)
+		c.Flags().SetDefValueReparseOK(true)
 	}
 
 	// NewCLIOpts: if there were opts for this subcmd set them here, see
@@ -53,9 +53,9 @@ func setupVersionCmdCLIArgs(reloadCLIFlags bool) {
 	// Note that you'll need to modify cmds/global.go as well otherwise your
 	// globs.Desc() call and globs.GetBool("myopt") will not work.
 
-	versionCmd.Run = version
+	c.Run = version
 	if reloadCLIFlags {
-		versionCmd.Flags().SetDefValueReparseOK(false)
+		c.Flags().SetDefValueReparseOK(false)
 	}
 }
 
