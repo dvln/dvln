@@ -60,10 +60,15 @@ var Timer *analysis.B
 // so the client knows where to find the file.
 var tmpLogfileUsed = false
 
-// init() preps the analysis pkg, scans in app globals, adds in subcommands
+// At startup time we'll initialize subcmds, opts, etc
+func init() {
+	doDvlnInit()
+}
+
+// doDvlnInit() preps the analysis pkg, scans in app globals, adds in subcommands
 // and makes a 1st pass at prepping the CLI options/descriptions/defaults
 // for the 'cli' (cobra) Go pkg being used to drive this CLI tool.
-func init() {
+func doDvlnInit() {
 	// Init the analysis package in case we turn analysis on
 	Timer = analysis.Initalize()
 
@@ -197,6 +202,47 @@ func setupDvlnCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	}
 }
 
+// showCLIPkgOutput is a cheesy wrapper on dumping any output coming back from
+// the 'cli' (cobra) package... typically usage and such.  Note that the
+// output can be dumped in JSON format or text depending upon what is needed
+// FIXME: see if output that isn't help can come back when no errors seen,
+//        if so then JSON outputting here might need extending (as anything
+//        else will not be dumped in JSON currently, even if in JSON "look")
+func showCLIPkgOutput(theOutput string, look string) {
+	help := globs.GetBool("help")
+	if help && look == "json" {
+		type helpStruct struct {
+			HelpMsg   string `json:"helpMsg"`
+			RecordLog string `json:"recordLog,omitempty"`
+			UserID    string `json:"userId,omitempty"`
+		}
+		fields := make([]string, 0, 0)
+		items := make([]interface{}, 0, 0)
+		var usage helpStruct
+		cleanOutput := api.EscapeCtrl([]byte(theOutput))
+		usage.HelpMsg = cast.ToString(cleanOutput)
+		fields = append(fields, "helpMsg")
+		if recTgt := globs.GetString("record"); recTgt != "" {
+			usage.RecordLog = recTgt
+			fields = append(fields, "recordLog")
+			user, err := user.Current()
+			if err == nil {
+				usage.UserID = user.Username
+				fields = append(fields, "userId")
+			}
+		}
+		items = append(items, &usage)
+		output, fatalProblem := api.GetJSONOutput(globs.GetString("apiver"), "dvlnHelp", "usage", "regular", fields, items)
+		if fatalProblem {
+			out.Print(output)
+			out.Exit(-1)
+		}
+		out.Print(output)
+	} else {
+		out.Print(theOutput)
+	}
+}
+
 // Execute is called by main(), it basically finishes prepping the 'dvln'
 // configuration data (combined with init() setting up options and available
 // subcommands and such) and then kicks off the 'cli' (cobra) package to run
@@ -256,56 +302,42 @@ func Execute(args []string) {
 	err := dvlnCmd.Execute()
 	Timer.Step("cmds.Execute(): dvlnCmd.Execute() complete, post ops next")
 	out.Debugln("Globs (cobra) package dvlnCmd.Execute() complete")
-	anyOutput := cast.ToString(cliPkgOut)
+	theOutput := cast.ToString(cliPkgOut)
+	look := globs.GetString("look")
 	if err != nil {
-		// Identify the issue..
-		out.Issue(anyOutput)
-		if tmpLogfileUsed {
-			out.Noteln("Temp output logfile:", globs.GetString("record"))
+		if look == "json" {
+			var errMsg api.Msg
+			if theOutput == "" {
+				theOutput = "Problem executing command (cli pkg error)"
+			}
+			errMsg.Message = theOutput
+			errMsg.Code = 2000
+			errMsg.Level = "FATAL"
+			output := api.FatalJSONMsg(globs.GetString("apiver"), errMsg)
+			prettyOut, fmtErr := api.PrettyJSON([]byte(output))
+			if fmtErr != nil {
+				prettyOut = output
+			}
+			out.Print(prettyOut)
+		} else {
+			out.Issue(theOutput)
+			if tmpLogfileUsed {
+				out.Noteln("Temp output logfile:", globs.GetString("record"))
+			}
 		}
 		out.Exit(-1)
 	}
 	// If any output remains from the cli (cobra) pkg dump it here (eg: usage)
-	look := globs.GetString("look")
-	jsonDumped := false
-	if anyOutput != "" {
-		help := globs.GetBool("help")
-		if help && look == "json" {
-			type helpStruct struct {
-				HelpMsg   string `json:"helpMsg"`
-				RecordLog string `json:"recordLog,omitempty"`
-				UserID    string `json:"userId,omitempty"`
-			}
-			fields := make([]string, 0, 0)
-			items := make([]interface{}, 0, 0)
-			var usage helpStruct
-			usage.HelpMsg = anyOutput
-			fields = append(fields, "helpMsg")
-			if recTgt := globs.GetString("record"); recTgt != "" {
-				usage.RecordLog = recTgt
-				fields = append(fields, "recordLog")
-				user, err := user.Current()
-				if err == nil {
-					usage.UserID = user.Username
-					fields = append(fields, "userId")
-				}
-			}
-			items = append(items, &usage)
-			output, fatalProblem := api.GetJSONString(globs.GetString("apiver"), "dvlnHelp", "usage", "regular", fields, items)
-			if fatalProblem {
-				out.Print(output)
-				out.Exit(-1)
-			}
-			out.Print(output)
-			jsonDumped = true
-		} else {
-			out.Print(anyOutput)
-		}
+	if theOutput != "" {
+		showCLIPkgOutput(theOutput, look)
 	}
-	if tmpLogfileUsed && !jsonDumped {
+	if tmpLogfileUsed && look != "json" {
 		out.Noteln("Temp output logfile:", globs.GetString("record"))
 	}
 	Timer.Step("cmds.Execute(): complete")
+	if err != nil {
+		out.Exit(-1)
+	}
 }
 
 // scanUserConfigFile initializes a viper/globs config file with sensible default

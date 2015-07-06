@@ -26,9 +26,6 @@ import (
 	"github.com/dvln/out"
 )
 
-var _ = fmt.Println
-var _ = os.Stderr
-
 type resulter struct {
 	Error   error
 	Output  string
