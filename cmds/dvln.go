@@ -260,14 +260,6 @@ func Execute(args []string) {
 	// at setting up the 'out' package with any new settings:
 	scanUserCfgAndReinit()
 
-	// Now that we've read in the CLI args and the users config file we have a
-	// full picture of the settings that will be used... now we'll take a 2nd
-	// pass through 'cli' (cobra) and the underlying 'pflags' package it uses to
-	// make the defaults for the CLI options match what the user has configured
-	// or used via CLI opts and config file settings for the current tool run
-	// - debatable but I like it for now, --help now reflects users full config
-	reloadCLIDefaults()
-
 	// Full opt/config file setup is now set up, now wrap up any early prep of
 	// the dvln tool before kicking off the 'cli' (cobra) libraries Execute()
 	// method (ie: start up commands/subcommands and finish processing opts)...
@@ -607,6 +599,15 @@ func scanUserCfgAndReinit() {
 	// to things like the --record flag before we do the final option default
 	// reload.
 	adjustOutLevels()
+
+	// Now that we've read in the CLI args and the users config file we have a
+	// full picture of the settings that will be used... now we'll take a 2nd
+	// pass through 'cli' (cobra) and the underlying 'pflags' package it uses to
+	// make the defaults for the CLI options match what the user has configured
+	// or used via CLI opts and config file settings for the current tool run
+	// - debatable but I like it for now, --help now reflects users full config
+	reloadCLIDefaults()
+
 }
 
 // reloadCLIDefaults finishes updating the 'globs' (viper) pkg so that all

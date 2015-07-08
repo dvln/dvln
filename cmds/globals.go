@@ -130,8 +130,8 @@ func initPkgGlobs() {
 	globs.SetDefault("quiet", false) // normal output to start
 	globs.SetDesc("quiet", "silent running", globs.StandardUser, globs.CLIGlobal)
 
-	globs.SetDefault("record", "off") // no output log to start
-	globs.SetDesc("record", "log to file or 'tmp'", globs.NoviceUser, globs.CLIGlobal)
+	globs.SetDefault("record", "off") // no output record/log to start
+	globs.SetDesc("record", "to file|'tmp'", globs.NoviceUser, globs.CLIGlobal)
 
 	globs.SetDefault("serve", false) // serve defaults off
 	globs.SetDesc("serve", "activate REST serve mode", globs.ExpertUser, globs.CLIGlobal)

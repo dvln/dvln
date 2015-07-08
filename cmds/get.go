@@ -23,11 +23,11 @@ import (
 
 var getCmd = &cli.Command{
 	Use:   "get",
-	Short: "get packages for a codebase [+ devline]",
-	Long: `Get packages for a codebase [+ devline], create/modify a workspace, eg:
-  % dvln get --codebase=prod_x --devline=proj_x
-  % dvln get -c prod_x -d proj_x
-  % dvln g -d proj_x    (if cfgfile:CodeBase or env:DVLN_CODEBASE set)`,
+	Short: "get packages",
+	Long: `Get packages via a static or dynamic/generated devline, eg:
+  % dvln get [ --codebase=cb_x ] [ --pkg=pkg_y ] [ --devline=dl_z ]
+  % dvln get [ -c cb_x ] [ -p=pkg_y ] [ -d dl_z ]
+  % dvln g [ -d dl_z ]    (set cfgfile:codebase|env:DVLN_CODEBASE, not req'd)`,
 	Run: get,
 }
 
