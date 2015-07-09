@@ -25,28 +25,29 @@ import (
 	globs "github.com/dvln/viper"
 )
 
-// initPkgGlobs sets up default settings for any variables used
-// throughout the dvln tool... "globals" so to speak. These will be
+// initPkgGlobs sets up default settings for any variables/opts used
+// for the dvln cmds pkg... "globals" so to speak.  These are currently
 // stashed in the 'globs' (viper) package at the default level (lowest
 // priority essentially) and can be overriden via config file, CLI
-// flags, sometimes codebase level overrides, etc
+// flags, and codebase, package and devline level overrides (in time).
+// - Any non-generic package can use globs to store "globals" which are then
+//   effectively visible across all dvln commands and non-generic packages
+// - Generic packages (eg: lib/dvln/out, or: github.com/dvln/out) should *NOT*
+//   use globs (viper) for config so as to remain extremely generic (and usable
+//   by the global community)... for such generic packages (or 3rd party/vendor
+//   packages dvln is using the dvln or dvln get cmd can use globs (vipers) to
+//   get DVLN configuration or opts/etc... and then it can use API's for those
+//   generic package (or package variables) to config that pkg for dvln's use
+//   as one can see with dvln/cmd/dvln.go init'ing the 'out' pkg on startup.
+// - You will find that other packages (dvln/lib) that are not generic will
+//   have more "global" settings, like these, for their own needs so as to
+//   keep the pkg data "close" to that package (currently), for example see
+//   the dvln/lib/json.go or dvln/lib/dvlnver.go files and their init() fcns.
 //
-// Note: this contains *all* app defaults regardless of top level dvln command
-// or subcommands or dvln focused pkg/library "globals" (however, any package
-// that is targeted at being generic/standalone should NOT use this as it will
-// no longer be generic as it couldn't be used without this cmds package)
-// - eriknow: this could be moved to lib/globs/dvln.go potentially or we could
-//            put all dvln specific libs in just lib so lib/dvlnglobs.go in
-//            which case the pkg would be 'dvlnlib' or something like that?,
-//            and all those are in the same VCS 'pkg' (import 'dvlnlib') and
-//            no "generic" sub-packages (eg: out, 3rd/*, etc) should use
-//            anything from within 'dvlnlib'.
-//
-// Note: for any new CLI focused option you need to modify cmds/dvln.go
-//       so pushCLIOptsTofg() pushes the CLI option into the 'globs' (viper)
-//       package... otherwise you're stuck with the CLI not working  ;)... and
-//
-//       and not have to use globs.Set() to push them into globs/viper, ugh)
+// Aside: for any new CLI focused option for the dvln meta-cmd check out
+//       setupDvlnCmdCLIArgs() in cmds/dvln.go and for subcommands see related
+//       setup<Name>CmdCLIArgs() located within each cmds/<name>.go file, I'd
+//       suggest searching on the string "NewCLIOpts" to find those locations.
 func initPkgGlobs() {
 	// Note: if you want aliases for keys you can add them like so, note
 	//       that "globs" (viper) is "case independent" so Taxonomies and
