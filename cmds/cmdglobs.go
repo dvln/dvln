@@ -25,7 +25,7 @@ import (
 	globs "github.com/dvln/viper"
 )
 
-// initPkgGlobs sets up default settings for any variables/opts used
+// doPkgCmdGlobsInit sets up default settings for any variables/opts used
 // for the dvln cmds pkg... "globals" so to speak.  These are currently
 // stashed in the 'globs' (viper) package at the default level (lowest
 // priority essentially) and can be overriden via config file, CLI
@@ -48,7 +48,7 @@ import (
 //       setupDvlnCmdCLIArgs() in cmds/dvln.go and for subcommands see related
 //       setup<Name>CmdCLIArgs() located within each cmds/<name>.go file, I'd
 //       suggest searching on the string "NewCLIOpts" to find those locations.
-func initPkgGlobs() {
+func doPkgCmdGlobsInit() {
 	// Note: if you want aliases for keys you can add them like so, note
 	//       that "globs" (viper) is "case independent" so Taxonomies and
 	//       taxonomies are identical as far as 'globs' is concerned

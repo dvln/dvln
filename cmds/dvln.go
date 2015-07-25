@@ -73,14 +73,14 @@ func doDvlnInit() {
 	Timer = analysis.Initalize()
 
 	// Set up "global" key/value (variable) defaults in the 'globs' (viper) pkg,
-	initPkgGlobs()
+	doPkgCmdGlobsInit()
 
 	// Add in the subcommands for the dvln command (get, update, ..), this
 	// will allow all CLI opts to be traversed fully in the initial loading
 	// of the CLI arguments into the 'globs' (viper) Go pkg
 	addSubCommands(dvlnCmd)
 
-	// Do an early pass on the CLI options, defaults may shift so this
+	// Do a first pass on the CLI options, defaults may shift so this
 	// function will be called again during runtime
 	reloadCLIFlags := false
 	setupDvlnCmdCLIArgs(dvlnCmd, reloadCLIFlags)
@@ -258,7 +258,20 @@ func Execute(args []string) {
 	// Load up the users dvln config file (ie: ~/.dvlncfg/cfg.json|toml/yaml..).
 	// This may alter settings/configuration further so we'll again make a pass
 	// at setting up the 'out' package with any new settings:
-	scanUserCfgAndReinit()
+	// Note: hold on acting on the error in case we can set up JSON, see below
+	err := scanUserCfgAndReinit()
+
+	// Set the 'out' pkg so that if we're in JSON
+	look := globs.GetString("look")
+	if look == "json" {
+		var handleJSON handleLookJSONMsgs
+		out.SetFormatter(out.LevelIssue, handleJSON)
+		out.SetFormatter(out.LevelError, handleJSON)
+		out.SetFormatter(out.LevelFatal, handleJSON)
+	}
+	if err != nil {
+		out.Fatal(err)
+	}
 
 	// Full opt/config file setup is now set up, now wrap up any early prep of
 	// the dvln tool before kicking off the 'cli' (cobra) libraries Execute()
@@ -291,20 +304,17 @@ func Execute(args []string) {
 	// and any PersistentPostRun functions... also added a PersistentHelpRun
 	// and PersistentErrRun set of funcs so if help or errors we can still
 	// deal with CLI opts for debugging and verbosity and such (and recording)
-	err := dvlnCmd.Execute()
+	err = dvlnCmd.Execute()
 	Timer.Step("cmds.Execute(): dvlnCmd.Execute() complete, post ops next")
 	out.Debugln("Globs (cobra) package dvlnCmd.Execute() complete")
 	theOutput := cast.ToString(cliPkgOut)
-	look := globs.GetString("look")
 	if err != nil {
 		if look == "json" {
-			var errMsg api.Msg
 			if theOutput == "" {
 				theOutput = "Problem executing command (cli pkg error)"
 			}
-			errMsg.Message = theOutput
-			errMsg.Code = 2000
-			errMsg.Level = "FATAL"
+			// FIXME: consider a DetailedError instead...
+			errMsg := api.NewMsg(theOutput, 2000, fmt.Sprintf("%s", out.LevelFatal))
 			output := api.FatalJSONMsg(globs.GetString("apiver"), errMsg)
 			prettyOut, fmtErr := api.PrettyJSON([]byte(output))
 			if fmtErr != nil {
@@ -335,7 +345,7 @@ func Execute(args []string) {
 // scanUserConfigFile initializes a viper/globs config file with sensible default
 // configuration flags and sets up any activities that have been requested
 // via the CLI and config settings (recording, debugging, verbosity, etc)
-func scanUserConfigFile() {
+func scanUserConfigFile() error {
 	// What config file?, default: ~/.dvlncfg/cfg.{json|toml|yaml|yml}
 	// the globs package uses config.json|toml|.. and we prefer less typing
 	// so we're going with cfg.json|toml|<ext> as the default name
@@ -358,7 +368,10 @@ func scanUserConfigFile() {
 		// if it's not a visible dir assume it's a file, if no file no problem
 		globs.SetConfigFile(configFullPath)
 	}
-	globs.ReadInConfig()
+	if err := globs.ReadInConfig(); err != nil {
+		return out.WrapErr(err, "Configuration package failed to read config", 2002)
+	}
+	return nil
 }
 
 // currentCmd is a package globs that will be 'dvln' if no subcommand was
@@ -475,9 +488,9 @@ func adjustOutLevels() {
 			os.Setenv("PKG_OUT_LOGFILE_FLAGS", flags)
 		}
 	}
-	if flags = os.Getenv("DVLN_NONZERO_EXIT_STRACKTRACE"); flags != "" {
+	if flags = os.Getenv("DVLN_STACK_TRACE_CONFIG"); flags != "" {
 		if flags != "none" {
-			os.Setenv("PKG_OUT_NONZERO_EXIT_STACKTRACE", flags)
+			os.Setenv("PKG_OUT_STACK_TRACE_CONFIG", flags)
 		}
 	}
 	if flags = os.Getenv("DVLN_PKG_OUT_SMART_FLAGS_PREFIX"); flags != "" {
@@ -491,25 +504,20 @@ func adjustOutLevels() {
 		}
 	}
 
-	jsonLevel := globs.GetInt("jsonindentlevel")
-	api.SetJSONIndentLevel(jsonLevel)
-	raw := globs.GetBool("jsonraw")
-	api.SetJSONRaw(raw)
-	jsonPrefix := globs.GetString("jsonprefix")
-	api.SetJSONPrefix(jsonPrefix)
+	// Like the 'out' package init above the 'pretty' and 'api' pkgs have
+	// no dependencies on 'globs' (viper) but the reverse is true (in some
+	// cases)... so tell the 'api' and 'pretty' package how we want dvln
+	// formatting done (note that this honors DVLN_TEXTHUMANIZE, etc)
 
-	// Like the 'out' package init above the 'pretty' package has no
-	// dependencies on 'globs' (viper) but the reverse is true... so we
-	// need to tell the 'pretty' package how we want our formatting done
-	// (note that this honors DVLN_TEXTHUMANIZE, etc)
-	humanize := globs.GetBool("texthumanize")
-	pretty.SetHumanize(humanize)
-	textLevel := globs.GetInt("textindentlevel")
-	pretty.SetOutputIndentLevel(textLevel)
-	textPrefixStr := globs.GetString("textprefix")
-	pretty.SetOutputPrefixStr(textPrefixStr)
+	api.SetJSONIndentLevel(globs.GetInt("jsonindentlevel"))
+	api.SetJSONRaw(globs.GetBool("jsonraw"))
+	api.SetJSONPrefix(globs.GetString("jsonprefix"))
 
-	// Lets handle recording of output..
+	pretty.SetHumanize(globs.GetBool("texthumanize"))
+	pretty.SetOutputIndentLevel(globs.GetInt("textindentlevel"))
+	pretty.SetOutputPrefixStr(globs.GetString("textprefix"))
+
+	// Handle recording of output to logfile if set up...
 	if record := globs.GetString("record"); record != "" && record != "off" {
 		// If the user has requested recording/logging the below will set up
 		// an io.Writer for a log file (via the 'out' package).  At this point
@@ -586,12 +594,14 @@ func prepCLIArgs(c *cli.Command, args []string) {
 // output data is going to the screen and any mirror logfile at the right
 // output levels and such (and that any help screens reflect those final
 // "full" settings from all this config data)
-func scanUserCfgAndReinit() {
+func scanUserCfgAndReinit() error {
 	// Scan the users config file, if any, honoring any CLI opts that might
 	// override the location of the user config file and push those settings
 	// into the 'globs' (viper) pkg as well.  Once done the 'globs' globals will
 	// be complete (Feature: except for future codebase and VCS pkg settings):
-	scanUserConfigFile()
+	if err := scanUserConfigFile(); err != nil {
+		return err
+	}
 
 	// Final output levels adjustements to take into account any tweaks from
 	// the users config file settings.  Note, don't move this below the calls
@@ -607,7 +617,7 @@ func scanUserCfgAndReinit() {
 	// or used via CLI opts and config file settings for the current tool run
 	// - debatable but I like it for now, --help now reflects users full config
 	reloadCLIDefaults()
-
+	return nil
 }
 
 // reloadCLIDefaults finishes updating the 'globs' (viper) pkg so that all
@@ -640,12 +650,13 @@ func reloadCLIDefaults() {
 // settings and defaults, handle any "easy" opts we can, eg: show version (-V),
 // show available "global" cfg/env settings (-G), set up the number of parallel
 // CPU's to leverage (-j<#>), etc... all stuff that can happen before we kick
-// into the full 'cli' (cobra) commander package 'Execute()' method.  Aside:
-// the boolean return may seem strange since false is only returned after the
-// tool should have terminated... but out.Exit() can be disabled for testing
-// purposes so if exit doesn't actually exit (PKG_OUT_NO_EXIT = 1) then we
-// want to bail outta here and let Execute() know to bail out also (strictly
-// for testing purposes is what that is used for).
+// into the full 'cli' (cobra) commander package 'Execute()' method.
+//
+// Note: A boolean return may seem strange since false is only returned after
+// the tool *should* have died.  Since out.Exit() can be disabled for testing
+// purposes then out.Exit() doesn't actually exit (PKG_OUT_NO_EXIT = 1) so we
+// want to bail outta here and let Execute() know to bail out also (a false
+// return can be for issues or for normal "bypassed" exits, doesn't matter)
 func dvlnFinalPrep() bool {
 	// (re)Dump user config file info.  Possibly dumped already from the calls
 	// within scanUserConfigFile() but, if output/logfile thresholds changed in
@@ -684,6 +695,7 @@ func dvlnFinalPrep() bool {
 	// Do some validation on the 'serve' mode:
 	if serve := globs.GetBool("serve"); serve {
 		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'")
+		// Test runs can make fatal not really fatal, so bail out if so
 		return false
 	}
 
@@ -712,8 +724,8 @@ func dvlnFinalPrep() bool {
 
 	globsCLI := globs.GetString("globs")
 	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" && globsCLI != "skip" {
-		out.Issuef("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
-		out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
+		issueMsg := fmt.Sprintf("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
+		out.IssueExitf(-1, "%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
 		return false
 	}
 	// If the client asks for user available "globs" settable via env or cfgfile
@@ -723,6 +735,33 @@ func dvlnFinalPrep() bool {
 		return false
 	}
 	return true
+}
+
+type handleLookJSONMsgs struct{}
+
+// FormatMessage in this context is to test the formatting "feature" of
+// the 'out' package.
+func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code int, stack string, dying bool) (string, int, bool) {
+	suppressOutputMask := 0
+	suppressNativePrefixing := false
+	look := globs.GetString("look")
+	if look != "json" {
+		return msg, suppressOutputMask, suppressNativePrefixing
+	}
+	problemMsg := api.NewMsg(msg, code, fmt.Sprintf("%s", outLevel))
+	if dying {
+		suppressNativePrefixing = true
+		msg = api.FatalJSONMsg(globs.GetString("apiver"), problemMsg)
+	} else {
+		// Suppress output to the screen and the logfile, our final JSON dump
+		// will include the warning and that will also go to the logfile (assuming
+		// it has been set up of course)
+		suppressOutputMask = out.ForBoth
+		suppressNativePrefixing = true
+		api.SetStoredNonFatalWarning(problemMsg, int(out.DefaultErrCode()))
+		msg = ""
+	}
+	return msg, suppressOutputMask, suppressNativePrefixing
 }
 
 // run for the dvln cmd really doesn't do anything but recommend the user
