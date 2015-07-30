@@ -55,10 +55,12 @@ For complete documentation see: http://dvln.org`,
 // Timer used by analysis code via the 'analysis' (nitro) pkg
 var Timer *analysis.B
 
-// tmpLogfileUsed indicates if we're using a tmp logfile to capture/mirror
-// the screen output, if so we'll want to always dump the path to that file
-// so the client knows where to find the file.
-var tmpLogfileUsed = false
+// Used when temp logging is active, the boolean will be true if that is the
+// case and the tmpLogfileMsg will be the message to print to the screen before
+// exit occurs (that string will be empty if in JSON mode since we'll have
+// already stored the tmp logfile name in a note in the JSON data)
+var tmpLogfileMsg string
+var tmpLogfileActive = false
 
 // At startup time we'll initialize subcmds, opts, etc
 func init() {
@@ -219,7 +221,7 @@ func showCLIPkgOutput(theOutput string, look string) {
 		fields := make([]string, 0, 0)
 		items := make([]interface{}, 0, 0)
 		var usage helpStruct
-		cleanOutput := api.EscapeCtrl([]byte(theOutput))
+		cleanOutput := api.EscapeJSONString([]byte(theOutput))
 		usage.HelpMsg = cast.ToString(cleanOutput)
 		fields = append(fields, "helpMsg")
 		if recTgt := globs.GetString("record"); recTgt != "" {
@@ -306,35 +308,46 @@ func Execute(args []string) {
 	// deal with CLI opts for debugging and verbosity and such (and recording)
 	err = dvlnCmd.Execute()
 	Timer.Step("cmds.Execute(): dvlnCmd.Execute() complete, post ops next")
-	out.Debugln("Globs (cobra) package dvlnCmd.Execute() complete")
 	theOutput := cast.ToString(cliPkgOut)
 	if err != nil {
-		if look == "json" {
-			if theOutput == "" {
-				theOutput = "Problem executing command (cli pkg error)"
-			}
-			// FIXME: consider a DetailedError instead...
-			errMsg := api.NewMsg(theOutput, 2000, fmt.Sprintf("%s", out.LevelFatal))
-			output := api.FatalJSONMsg(globs.GetString("apiver"), errMsg)
-			prettyOut, fmtErr := api.PrettyJSON([]byte(output))
-			if fmtErr != nil {
-				prettyOut = output
-			}
-			out.Print(prettyOut)
+		if theOutput == "" {
+			err = out.WrapErr(err, "Command line processing problem", 2000)
 		} else {
-			out.Issue(theOutput)
-			if tmpLogfileUsed {
-				out.Noteln("Temp output logfile:", globs.GetString("record"))
-			}
+			// Use cli pkg output, it matches the error w/more info:
+			err = out.NewErr(theOutput, 2000)
 		}
-		out.Exit(-1)
 	}
+
+	// FIXME: I would like an 'out.DeferMsg(Messenger)" which is
+	//        guaranteed to run before any final 'out' pkg exit 0 or non-zero:
+	//        -> eg: I always want a note indicating the tmp output file name
+	//               if I asked for a tmp log file
+	//           -> for JSON it's already stored in a Note right when we got
+	//              the tmpfile name, but for text mode we need to print it
+	//              as the last thing on the screen *always*
+	//        -> once this is done tweak "record" use to simply do this:
+	//              out.DeferMsg(finalNoteMsg)
+	//           And the fun on that empty struct would see if in text mode
+	//           and simply run the below code:
+	//	if tmpLogfileMsg != "" {
+	//		out.Noteln(tmpLogfileMsg)
+	//	}
+	//        -> once this is done remove all uses of the above code elsewhere
+	//           in this module and that should cover it
+	if err != nil {
+		if tmpLogfileMsg != "" {
+			out.Noteln(tmpLogfileMsg)
+		}
+		out.IssueExit(-1, err)
+		return
+	}
+	out.Debugln("CLI (cobra) package dvlnCmd.Execute() completed successfully")
 	// If any output remains from the cli (cobra) pkg dump it here (eg: usage)
 	if theOutput != "" {
 		showCLIPkgOutput(theOutput, look)
 	}
-	if tmpLogfileUsed && look != "json" {
-		out.Noteln("Temp output logfile:", globs.GetString("record"))
+	if tmpLogfileMsg != "" {
+		out.Noteln(tmpLogfileMsg)
 	}
 	Timer.Step("cmds.Execute(): complete")
 	if err != nil {
@@ -409,8 +422,8 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
 		// subcommand getCmd or versionCmd objects) and if we are ignore flag
 		// errors (as above) then any error coming back from Find will be from
 		// non-flag issues (eg: bad subcommand name), will fail here if so:
-		out.Issuef("Unable to parse command line: %s\n", err)
-		out.IssueExitf(-1, "Please run 'dvln help' for usage\n")
+		err = out.NewErrf(2002, "Unable to parse command line: %s\nPlease run 'dvln help' for usage\n", err)
+		out.IssueExit(-1, err)
 	}
 	// For nice errors lets stash either 'dvln' or, if a subcommand was used,
 	// into the 'currentCmd' unexported package global so we know what the user
@@ -525,9 +538,20 @@ func adjustOutLevels() {
 		// matches the default screen output setting
 		//		out.SetThreshold(out.LevelInfo, out.ForLogfile)
 		if record == "temp" || record == "tmp" {
-			if !tmpLogfileUsed {
-				tmpLogfileUsed = true
+			if !tmpLogfileActive {
 				record = out.UseTempLogFile("dvln.")
+				tmpLogfileActive = true
+				tmpLogfileMsg = fmt.Sprintf("Temp output logfile: %s", record)
+				if globs.GetString("look") == "json" {
+					// If in JSON stash the tmp logfile
+					// name as early as possible in the JSON API so it will have
+					// a "note" field with the temp logfile info "ready"
+					tmpMsg := api.NewMsg(tmpLogfileMsg, 101, fmt.Sprintf("%s", out.LevelNote))
+					api.SetStoredNote(tmpMsg)
+					// with that we are done, no need for later screen prints
+					tmpLogfileMsg = ""
+				}
+
 				// Here we try and override what the user gave us basically by
 				// replacing it with the actual tmp file name
 				globs.Set("record", record)
@@ -694,7 +718,7 @@ func dvlnFinalPrep() bool {
 
 	// Do some validation on the 'serve' mode:
 	if serve := globs.GetBool("serve"); serve {
-		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'")
+		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'  :)")
 		// Test runs can make fatal not really fatal, so bail out if so
 		return false
 	}
@@ -702,7 +726,9 @@ func dvlnFinalPrep() bool {
 	// Make sure that given --look|-l or cfgfile:Look or env:DVLN_LOOK are valid
 	look := globs.GetString("look")
 	if look != "text" && look != "json" {
-		out.IssueExitf(-1, "The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
+		issueMsg := fmt.Sprintf("The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
+		issueMsg = fmt.Sprintf("%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
+		out.IssueExit(-1, out.NewErr(issueMsg, 2009))
 		return false
 	} else if look == "json" && globs.GetBool("interact") {
 		out.Debugln("Interactive runs are not available for the 'json' output \"look\"")
@@ -713,6 +739,9 @@ func dvlnFinalPrep() bool {
 	// If the developer asks for the version of the tool print that out:
 	if version := globs.GetBool("version"); version {
 		out.Print(lib.DvlnVerStr())
+		if tmpLogfileMsg != "" {
+			out.Noteln(tmpLogfileMsg)
+		}
 		out.Exit(0)
 		return false
 	}
@@ -725,12 +754,16 @@ func dvlnFinalPrep() bool {
 	globsCLI := globs.GetString("globs")
 	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" && globsCLI != "skip" {
 		issueMsg := fmt.Sprintf("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
-		out.IssueExitf(-1, "%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
+		issueMsg = fmt.Sprintf("%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
+		out.IssueExit(-1, out.NewErr(issueMsg, 2010))
 		return false
 	}
 	// If the client asks for user available "globs" settable via env or cfgfile
 	if globsCLI == "env" || globsCLI == "cfg" {
 		out.Print(fmt.Sprintf("%v", globs.GetSingleton()))
+		if tmpLogfileMsg != "" {
+			out.Noteln(tmpLogfileMsg)
+		}
 		out.Exit(0)
 		return false
 	}
@@ -767,5 +800,5 @@ func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code i
 // run for the dvln cmd really doesn't do anything but recommend the user
 // select a subcommand to run
 func run(cmd *cli.Command, args []string) {
-	out.IssueExitln(-1, "Please use a valid subcommand (for a list: 'dvln help')")
+	out.IssueExit(-1, out.NewErr("Please use a valid subcommand (for a list: 'dvln help')", 2001))
 }

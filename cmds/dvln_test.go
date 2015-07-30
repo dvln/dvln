@@ -48,7 +48,7 @@ func simpleTester(c *cli.Command, input string) resulter {
 	// package is redirected to the same buffer
 	buf := new(bytes.Buffer)
 
-	// Tell globs (cobra) the args we are passing on the "fake" command line:
+	// Tell cli pkg (cobra) the args we are passing on the "fake" command line:
 	args := strings.Split(input, " ")
 	c.SetArgs(args)
 	fullArgs := []string{"dvln"}
@@ -101,7 +101,8 @@ func TestNoArgs(t *testing.T) {
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
 	x := setupDvlnCmdTest("")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
-	checkResultContains(t, x, "Issue: Please use a valid subcommand")
+	checkResultContains(t, x, "Issue #2001: Please use a valid subcommand")
+	//eriknow, coming back double
 }
 
 // TestNoArgsCommand sees what dvln does with no args at all...
@@ -109,7 +110,7 @@ func TestBogusArgsCommand(t *testing.T) {
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
 	x := setupDvlnCmdTest("--baloney")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
-	checkResultContains(t, x, "Issue: Found unknown flag: --baloney")
+	checkResultContains(t, x, "Issue #2000: Found unknown flag: --baloney")
 }
 
 // TestHelpInterface runs through basic help for the dvln meta-cmd to see if the
@@ -176,19 +177,18 @@ func TestAnalysisArg(t *testing.T) {
 }
 
 func TestDebugArg(t *testing.T) {
-	// We'll combine it with help output for a few
-	// FIXME: every time we fire up Execute() we end up with extra
-	//        help subcmd descriptions tacked on, need to fix that
-	//        in cobra so it doesn't keep doing that
+	// We'll combine it with help output for a few samples
 	x := setupDvlnCmdTest("-Dh")
-	checkResultContains(t, x, "Debug: Globs (cobra) package dvlnCmd.Execute() complete")
+	checkResultContains(t, x, "Debug: CLI (cobra) package dvlnCmd.Execute() completed successfully")
 	x = setupDvlnCmdTest("--debug --help")
-	checkResultContains(t, x, "Debug: Globs (cobra) package dvlnCmd.Execute() complete")
+	checkResultContains(t, x, "Debug: CLI (cobra) package dvlnCmd.Execute() completed successfully")
 	x = setupDvlnCmdTest("--debug=false --help")
-	checkResultOmits(t, x, "Debug: Globs (cobra) package dvlnCmd.Execute() complete")
+	checkResultOmits(t, x, "Debug: CLI (cobra) package dvlnCmd.Execute() completed successfully")
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
+	// turn off help for the next tests... and, while doing so, make sure that
+	// option works as expected as well
 	x = setupDvlnCmdTest("--help=false")
-	checkResultContains(t, x, "Issue: Please use a valid subcommand")
+	checkResultContains(t, x, "Issue #2001: Please use a valid subcommand")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
 }
 
@@ -245,7 +245,7 @@ func TestVersionFunctionality(t *testing.T) {
 	checkResultContains(t, x, "Version: ")
 	checkResultContains(t, x, "API Rev: ")
 	x = setupDvlnCmdTest("--version=false --help=false")
-	checkResultContains(t, x, "Issue: Please use a valid subcommand")
+	checkResultContains(t, x, "Issue #2001: Please use a valid subcommand")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
 }
 
@@ -255,8 +255,8 @@ func TestVersionFunctionality(t *testing.T) {
 func TestGlobsFunctionality(t *testing.T) {
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
 	x := setupDvlnCmdTest("--globs")
-	checkResultContains(t, x, "Issue: Found flag which needs an argument: --globs")
-	checkResultContains(t, x, "Issue: Run 'dvln help' for subcommand listing and basic usage.")
+	checkResultContains(t, x, "Issue #2000: Found flag which needs an argument: --globs")
+	checkResultContains(t, x, "Issue #2000: Run 'dvln help' for subcommand listing and basic usage.")
 	x = setupDvlnCmdTest("-vG=env")
 	checkResultContains(t, x, "DVLN_ANALYSIS: ")
 	checkResultContains(t, x, "  Description: memory and timing analytics")
@@ -308,7 +308,7 @@ func TestGlobsFunctionality(t *testing.T) {
 	checkResultContains(t, x, "  Use Level:   NOVICE")
 	checkResultContains(t, x, "  Value:       ")
 	x = setupDvlnCmdTest("-G=blah")
-	checkResultContains(t, x, "Issue: The --globs option (-G) can only be set to 'env' or 'cfg'")
+	checkResultContains(t, x, "Issue #2010: The --globs option (-G) can only be set to 'env' or 'cfg'")
 	x = setupDvlnCmdTest("-vGcfg -Ljson")
 	checkResultContains(t, x, "\"apiVersion\": ")
 	checkResultContains(t, x, "\"id\": 0,")
@@ -364,6 +364,6 @@ func TestGlobsFunctionality(t *testing.T) {
 	// setting without fully clearing it (blasting the cli setting or unsetting
 	// it is a pain currently so this "cheats" and bypasses that need)
 	x = setupDvlnCmdTest("-Gskip")
-	checkResultContains(t, x, "Issue: Please use a valid subcommand")
+	checkResultContains(t, x, "Issue #2001: Please use a valid subcommand")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
 }
