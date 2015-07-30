@@ -308,7 +308,7 @@ func TestGlobsFunctionality(t *testing.T) {
 	checkResultContains(t, x, "  Use Level:   NOVICE")
 	checkResultContains(t, x, "  Value:       ")
 	x = setupDvlnCmdTest("-G=blah")
-	checkResultContains(t, x, "Issue #2010: The --globs option (-G) can only be set to 'env' or 'cfg'")
+	checkResultContains(t, x, "Issue #2005: The --globs option (-G) can only be set to 'env' or 'cfg'")
 	x = setupDvlnCmdTest("-vGcfg -Ljson")
 	checkResultContains(t, x, "\"apiVersion\": ")
 	checkResultContains(t, x, "\"id\": 0,")

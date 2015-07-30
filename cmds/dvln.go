@@ -249,7 +249,7 @@ func showCLIPkgOutput(theOutput string, look string) {
 // configuration data (combined with init() setting up options and available
 // subcommands and such) and then kicks off the 'cli' (cobra) package to run
 // subcommands and such via the dvlnCmd.Execute() call in the routine.
-func Execute(args []string) {
+func Execute(args []string) int {
 	Timer.Step("cmds.Execute(): init() complete (defaults set, subcmds added, CLI args set up)")
 
 	// Shove the CLI args into the 'globs' (viper) package before we even kick
@@ -280,9 +280,12 @@ func Execute(args []string) {
 	// method (ie: start up commands/subcommands and finish processing opts)...
 	// so we can set up # of CPU's to use, handle easy requests the user gives
 	// such as what version of the tool is running (-V|--version), show settings
-	// available via env or config file (--globs|-G {cfg|env}), etc.
-	if !dvlnFinalPrep() {
-		return
+	// available via env or config file (--globs|-G {cfg|env}), etc.  If we did
+	// handle easy requests then complete will be true and we'll bail out (note
+	// that complete can also be true on error, exitVal will which, 0=success)
+	complete, exitVal := dvlnFinalPrep()
+	if complete {
+		return exitVal
 	}
 
 	//dvlnCmd.DebugFlags() // can be useful for debugging purposes now and then
@@ -318,41 +321,21 @@ func Execute(args []string) {
 		}
 	}
 
-	// FIXME: I would like an 'out.DeferMsg(Messenger)" which is
-	//        guaranteed to run before any final 'out' pkg exit 0 or non-zero:
-	//        -> eg: I always want a note indicating the tmp output file name
-	//               if I asked for a tmp log file
-	//           -> for JSON it's already stored in a Note right when we got
-	//              the tmpfile name, but for text mode we need to print it
-	//              as the last thing on the screen *always*
-	//        -> once this is done tweak "record" use to simply do this:
-	//              out.DeferMsg(finalNoteMsg)
-	//           And the fun on that empty struct would see if in text mode
-	//           and simply run the below code:
-	//	if tmpLogfileMsg != "" {
-	//		out.Noteln(tmpLogfileMsg)
-	//	}
-	//        -> once this is done remove all uses of the above code elsewhere
-	//           in this module and that should cover it
 	if err != nil {
-		if tmpLogfileMsg != "" {
-			out.Noteln(tmpLogfileMsg)
-		}
-		out.IssueExit(-1, err)
-		return
+		out.IssueExit(int(out.ErrorExitVal()), err)
+		return int(out.ErrorExitVal())
 	}
 	out.Debugln("CLI (cobra) package dvlnCmd.Execute() completed successfully")
 	// If any output remains from the cli (cobra) pkg dump it here (eg: usage)
 	if theOutput != "" {
 		showCLIPkgOutput(theOutput, look)
 	}
-	if tmpLogfileMsg != "" {
-		out.Noteln(tmpLogfileMsg)
-	}
 	Timer.Step("cmds.Execute(): complete")
 	if err != nil {
-		out.Exit(-1)
+		out.Exit(int(out.ErrorExitVal()))
+		return int(out.ErrorExitVal())
 	}
+	return 0
 }
 
 // scanUserConfigFile initializes a viper/globs config file with sensible default
@@ -444,6 +427,35 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
 	if c.HasSubCommands() && cmd.Name() != c.Root().Name() {
 		topCmd = false // this is a subcmd, not the top 'dvln' cmd any longer
 		pushCLIOptsToGlobs(cmd, topCmd, args)
+	}
+}
+
+// doBeforeExit() uses a feature of the 'out' package where one can register
+// a "deferred" function that will fire before the 'out' packages calls the
+// system os.Exit() method (this assumes one is using out.Exit() and various
+// calls like out.Fatal(), out.IssueExit() and out.ErrorExit() to exit, if
+// so then this will be called before final exit).  In our case if the user
+// is working with a temp log file and we're in text mode (msg will be "" if
+// we're in JSON output mode, see "record" handling below) then add a note
+// about the temp log files path+name so the user can find it.
+func doBeforeExit(exitVal int) {
+	if tmpLogfileMsg != "" {
+		// Send screen note to STDERR if currently it is the default STDOUT
+		currWriter := out.Writer(out.LevelNote, out.ForScreen)
+		if currWriter == os.Stdout {
+			out.SetWriter(out.LevelNote, os.Stderr, out.ForScreen)
+
+		}
+
+		// Don't put the tmp logfile note in the logfile itself...
+		currThresh := out.Threshold(out.ForLogfile)
+		out.SetThreshold(out.LevelDiscard, out.ForLogfile)
+
+		out.Noteln(tmpLogfileMsg)
+
+		// Just to be safe set them back to previous settings
+		out.SetThreshold(currThresh, out.ForLogfile)
+		out.SetWriter(out.LevelNote, currWriter, out.ForScreen)
 	}
 }
 
@@ -550,6 +562,8 @@ func adjustOutLevels() {
 					api.SetStoredNote(tmpMsg)
 					// with that we are done, no need for later screen prints
 					tmpLogfileMsg = ""
+				} else {
+					out.SetDeferFunc(doBeforeExit)
 				}
 
 				// Here we try and override what the user gave us basically by
@@ -674,14 +688,11 @@ func reloadCLIDefaults() {
 // settings and defaults, handle any "easy" opts we can, eg: show version (-V),
 // show available "global" cfg/env settings (-G), set up the number of parallel
 // CPU's to leverage (-j<#>), etc... all stuff that can happen before we kick
-// into the full 'cli' (cobra) commander package 'Execute()' method.
-//
-// Note: A boolean return may seem strange since false is only returned after
-// the tool *should* have died.  Since out.Exit() can be disabled for testing
-// purposes then out.Exit() doesn't actually exit (PKG_OUT_NO_EXIT = 1) so we
-// want to bail outta here and let Execute() know to bail out also (a false
-// return can be for issues or for normal "bypassed" exits, doesn't matter)
-func dvlnFinalPrep() bool {
+// into the full 'cli' (cobra) commander package 'Execute()' method.  Returns:
+// - programComplete: true if error or able to wrap up users needs
+// - exitVal (int): if programComplete is true, then 0 means success, non-zero
+//                  means failure (ignored if programComplete is false)
+func dvlnFinalPrep() (bool, int) {
 	// (re)Dump user config file info.  Possibly dumped already from the calls
 	// within scanUserConfigFile() but, if output/logfile thresholds changed in
 	// the users config file we may have missed logging it, so dump it again as
@@ -700,12 +711,14 @@ func dvlnFinalPrep() bool {
 
 	// Honor the parallel jobs setting (-j, --jobs, cfg file setting Jobs or env
 	// var DVLN_JOBS can all control this), identifies # of CPU's to use.
+	errExit := int(out.ErrorExitVal())
 	numCPU := runtime.NumCPU()
 	if jobs := globs.GetString("jobs"); jobs != "" && jobs != "all" {
 		if _, err := strconv.Atoi(jobs); err != nil {
-			out.Issuef("Jobs value should be a number or 'all', found: %s\n", jobs)
-			out.IssueExitf(-1, "Please run 'dvln help%s' for usage\n", cmdName)
-			return false
+			issueMsg := fmt.Sprintf("Jobs value should be a number or 'all', found: %s\n", jobs)
+			issueMsg = fmt.Sprintf("%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
+			out.IssueExit(errExit, out.NewErr(issueMsg, 2003))
+			return true, errExit
 		}
 		numJobs := cast.ToInt(jobs)
 		if numJobs > numCPU {
@@ -720,7 +733,7 @@ func dvlnFinalPrep() bool {
 	if serve := globs.GetBool("serve"); serve {
 		out.Fatalln("Serve mode is not available yet, to contribute email 'brady@dvln.org'  :)")
 		// Test runs can make fatal not really fatal, so bail out if so
-		return false
+		return true, 0
 	}
 
 	// Make sure that given --look|-l or cfgfile:Look or env:DVLN_LOOK are valid
@@ -728,8 +741,8 @@ func dvlnFinalPrep() bool {
 	if look != "text" && look != "json" {
 		issueMsg := fmt.Sprintf("The --look option (-l) can only be set to 'text' or 'json', found: '%s'\n", look)
 		issueMsg = fmt.Sprintf("%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
-		out.IssueExit(-1, out.NewErr(issueMsg, 2009))
-		return false
+		out.IssueExit(errExit, out.NewErr(issueMsg, 2004))
+		return true, errExit
 	} else if look == "json" && globs.GetBool("interact") {
 		out.Debugln("Interactive runs are not available for the 'json' output \"look\"")
 		out.Debugln("- silently disabling interaction (client may have it set for text output)")
@@ -739,11 +752,8 @@ func dvlnFinalPrep() bool {
 	// If the developer asks for the version of the tool print that out:
 	if version := globs.GetBool("version"); version {
 		out.Print(lib.DvlnVerStr())
-		if tmpLogfileMsg != "" {
-			out.Noteln(tmpLogfileMsg)
-		}
 		out.Exit(0)
-		return false
+		return true, 0
 	}
 
 	// If trace level debug enabled (checked inside the routine) this will dump
@@ -755,19 +765,16 @@ func dvlnFinalPrep() bool {
 	if globsCLI != "" && globsCLI != "env" && globsCLI != "cfg" && globsCLI != "skip" {
 		issueMsg := fmt.Sprintf("The --globs option (-G) can only be set to 'env' or 'cfg', found: '%s'\n", globsCLI)
 		issueMsg = fmt.Sprintf("%sPlease run 'dvln help%s' for usage\n", issueMsg, cmdName)
-		out.IssueExit(-1, out.NewErr(issueMsg, 2010))
-		return false
+		out.IssueExit(errExit, out.NewErr(issueMsg, 2005))
+		return true, errExit
 	}
 	// If the client asks for user available "globs" settable via env or cfgfile
 	if globsCLI == "env" || globsCLI == "cfg" {
 		out.Print(fmt.Sprintf("%v", globs.GetSingleton()))
-		if tmpLogfileMsg != "" {
-			out.Noteln(tmpLogfileMsg)
-		}
 		out.Exit(0)
-		return false
+		return true, 0
 	}
-	return true
+	return false, 0
 }
 
 type handleLookJSONMsgs struct{}

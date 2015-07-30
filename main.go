@@ -19,10 +19,15 @@ import (
 	"os"
 
 	"github.com/dvln/dvln/cmds"
+	"github.com/dvln/out"
 )
 
 func main() {
 	// Kick off the the 'cli' mgmt package (Cobra commander) for the dvln
 	// command and the various subcommands and opts:
-	cmds.Execute(os.Args)
+	exitVal := cmds.Execute(os.Args)
+	out.Exit(exitVal)
+	// Note, the 2nd exit shouldn't happen but in case someone told
+	//       the 'out' pkg to bypass exitting (for test) lets exit now:
+	os.Exit(exitVal)
 }
