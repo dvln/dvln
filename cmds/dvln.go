@@ -248,7 +248,7 @@ func showCLIPkgOutput(theOutput string, look string) {
 // Execute is called by main(), it basically finishes prepping the 'dvln'
 // configuration data (combined with init() setting up options and available
 // subcommands and such) and then kicks off the 'cli' (cobra) package to run
-// subcommands and such via the dvlnCmd.Execute() call in the routine.
+// subcommands and such via the dvlnCmd.Execute() call within the routine.
 func Execute(args []string) int {
 	Timer.Step("cmds.Execute(): init() complete (defaults set, subcmds added, CLI args set up)")
 
@@ -257,13 +257,13 @@ func Execute(args []string) int {
 	// early as well as adjust the help screen to reflect opts the user has set:
 	prepCLIArgs(dvlnCmd, args)
 
-	// Load up the users dvln config file (ie: ~/.dvlncfg/cfg.json|toml/yaml..).
+	// Load up the users dvln config file (ie: ~/.dvlncfg/cfg.json|toml|yaml..).
 	// This may alter settings/configuration further so we'll again make a pass
 	// at setting up the 'out' package with any new settings:
 	// Note: hold on acting on the error in case we can set up JSON, see below
 	err := scanUserCfgAndReinit()
 
-	// Set the 'out' pkg so that if we're in JSON
+	// See if in JSON output mode, if so set the 'out' pkg appropriately..
 	look := globs.GetString("look")
 	if look == "json" {
 		var handleJSON handleLookJSONMsgs
@@ -278,11 +278,11 @@ func Execute(args []string) int {
 	// Full opt/config file setup is now set up, now wrap up any early prep of
 	// the dvln tool before kicking off the 'cli' (cobra) libraries Execute()
 	// method (ie: start up commands/subcommands and finish processing opts)...
-	// so we can set up # of CPU's to use, handle easy requests the user gives
+	// this sets up # of CPU's to leverage, handles easy requests the user gives
 	// such as what version of the tool is running (-V|--version), show settings
 	// available via env or config file (--globs|-G {cfg|env}), etc.  If we did
-	// handle easy requests then complete will be true and we'll bail out (note
-	// that complete can also be true on error, exitVal will which, 0=success)
+	// handle easy requests then complete will be true and we'll bail out (note,
+	// complete can also be true on error, exitVal clarifies: 0=success)
 	complete, exitVal := dvlnFinalPrep()
 	if complete {
 		return exitVal
@@ -292,15 +292,15 @@ func Execute(args []string) int {
 
 	// Capture 'cli' (cobra) pkg output into the cliPkgOut byte buffer, note
 	// that this only affects the 'cli' (cobra) packages output (which also,
-	// btw, indirectly controls and affects the 'pflags' package used by it).
-	// The reason we do this is so we can control all output via the 'out' pkg
-	// so we'll grab any results from 'dvlnCmd.Execute()' and dump it below:
+	// BTW, indirectly controls and affects the 'pflags' package used by it).
+	// Do this is so we can grab/control/dump all output via the 'out' pkg:
 	var cliPkgOut = new(bytes.Buffer)
 	dvlnCmd.SetOutput(cliPkgOut)
 
+    // Let the 'analysis' pkg "time" things up to here..
 	Timer.Step("cmds.Execute(): loaded dvln user config, early setup and output prep done")
 
-	// Allow partial command matching, shortest unique match
+	// Allow 'cli' (cobra) pkg partial command matching, shortest unique match
 	cli.EnablePrefixMatching = true
 
 	// Kick off 'cli' (cobra) pkg, will parse args and the cmd/subcmd tree
@@ -436,8 +436,8 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
 // calls like out.Fatal(), out.IssueExit() and out.ErrorExit() to exit, if
 // so then this will be called before final exit).  In our case if the user
 // is working with a temp log file and we're in text mode (msg will be "" if
-// we're in JSON output mode, see "record" handling below) then add a note
-// about the temp log files path+name so the user can find it.
+// we're in JSON output mode, see "record" handling below) then add a screen
+// only note about the temp log files path+name so the user can find it.
 func doBeforeExit(exitVal int) {
 	if tmpLogfileMsg != "" {
 		// Send screen note to STDERR if currently it is the default STDOUT
@@ -779,13 +779,28 @@ func dvlnFinalPrep() (bool, int) {
 
 type handleLookJSONMsgs struct{}
 
-// FormatMessage in this context is to test the formatting "feature" of
-// the 'out' package.
+// FormatMessage in this context implements the Formatter interface from
+// the 'out' package.  This is only called if in JSON mode and only for
+// output levels Issue, Error and Fatal (note: these are double checked
+// in the method as well "just in case").  If JSON output desired we'll
+// handle terminal issues/errors/fatals and non-terminal issue/errors
+// as follows:
+// - if it's non-fatal then "register" the issue/error with the 'api' pkg
+// so the JSON that is dumped at the end of our run includes a 'warning'
+// which will give an error code and an 'out' package output level
+// - if it is fatal then generate a full JSON error response using an 'api'
+// pkg call and then control the 'out' pkg so a pure JSON error is displayed
+// before dying off within the 'out' package.
+//
+// The idea is that the client wants JSON output fmt and should always get
+// it even if any error has occurred (and we'll want to inform them of any
+// non-fatal issues as well via the JSON 'warning' field to use as they
+// see fit)
 func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code int, stack string, dying bool) (string, int, bool) {
 	suppressOutputMask := 0
 	suppressNativePrefixing := false
 	look := globs.GetString("look")
-	if look != "json" {
+	if look != "json" || outLevel < out.LevelIssue {
 		return msg, suppressOutputMask, suppressNativePrefixing
 	}
 	problemMsg := api.NewMsg(msg, code, fmt.Sprintf("%s", outLevel))
@@ -805,7 +820,11 @@ func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code i
 }
 
 // run for the dvln cmd really doesn't do anything but recommend the user
-// select a subcommand to run
+// select a subcommand to run (as a raw dvln cmd with no subcommands should
+// not get this far unless someone forgot to add a subcmd).  When a subcmd
+// is used then the 'run()' method for that subcommand will be executed
+// instead of this one (and all top level 'dvln' options like --globs=cfg
+// are handled before we get this far).
 func run(cmd *cli.Command, args []string) {
 	out.IssueExit(-1, out.NewErr("Please use a valid subcommand (for a list: 'dvln help')", 2001))
 }
