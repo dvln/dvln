@@ -20,6 +20,7 @@ package cmds
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/dvln/out"
 	globs "github.com/dvln/viper"
@@ -95,8 +96,9 @@ func doPkgCmdGlobsInit() {
 	globs.SetDefault("codebase", "") // no default code base to start with
 	globs.SetDesc("codebase", "codebase name or URL", globs.NoviceUser, globs.CLIGlobal)
 
-	globs.SetDefault("config", "~/.dvlncfg/") // defaults to .dvlncfg/cfg.json|toml|yaml|..
-	globs.SetDesc("config", "file|path, path scans cfg.json|toml|yml", globs.ExpertUser, globs.CLIGlobal)
+	cfgDir := filepath.Join("~", ".dvlncfg")
+	globs.SetDefault("config", cfgDir) // defaults to ~/.dvlncfg
+	globs.SetDesc("config", "tool config dir|file", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("debug", false)
 	globs.SetDesc("debug", "control debug output", globs.StandardUser, globs.CLIGlobal)

@@ -34,6 +34,8 @@ import (
 	"github.com/dvln/out"
 	flag "github.com/dvln/pflag"
 	"github.com/dvln/pretty"
+	"github.com/dvln/util/homedir"
+	"github.com/dvln/util/path"
 	globs "github.com/dvln/viper"
 )
 
@@ -297,7 +299,7 @@ func Execute(args []string) int {
 	var cliPkgOut = new(bytes.Buffer)
 	dvlnCmd.SetOutput(cliPkgOut)
 
-    // Let the 'analysis' pkg "time" things up to here..
+	// Let the 'analysis' pkg "time" things up to here..
 	Timer.Step("cmds.Execute(): loaded dvln user config, early setup and output prep done")
 
 	// Allow 'cli' (cobra) pkg partial command matching, shortest unique match
@@ -347,22 +349,27 @@ func scanUserConfigFile() error {
 	// so we're going with cfg.json|toml|<ext> as the default name
 	globs.SetConfigName("cfg")
 
-	// Now grab the config file path info from the 'globs' (viper) Go pkg which
+	// Now grab the config file dir info from the 'globs' (viper) Go pkg which
 	// has our globals and CLI opts and overrides set (except for the config
 	// file as we haven't read it yet of course, that's what we're doing):
-	configFile := globs.GetString("config")
+	configPath := globs.GetString("config")
 
 	// Handle $HOME and ~ and such in the config file name
-	configFullPath := globs.AbsPathify(configFile)
+	configCleanPath := path.AbsPathify(configPath)
+	globs.Set("configdir", "")
 
 	// Typically Config defaults to a path (dir) to look for config.<extension>
 	// files in but it can also be a full path to a file, try and detect which:
-	if fileInfo, err := os.Stat(configFullPath); err == nil && fileInfo.IsDir() {
-		// if it's a dir then just add the path, default looks for config.<etc>
-		globs.AddConfigPath(configFile)
+	if fileInfo, err := os.Stat(configCleanPath); err == nil && fileInfo.IsDir() {
+		// if it's a dir then just add the path, default looks for cfg.json|..
+		globs.AddConfigPath(configPath)
+		globs.Set("configdir", configCleanPath)
 	} else {
 		// if it's not a visible dir assume it's a file, if no file no problem
-		globs.SetConfigFile(configFullPath)
+		if err == nil && !fileInfo.IsDir() {
+			globs.Set("configdir", filepath.Dir(configCleanPath))
+		}
+		globs.SetConfigFile(configCleanPath)
 	}
 	if err := globs.ReadInConfig(); err != nil {
 		return out.WrapErr(err, "Configuration package failed to read config", 2002)
@@ -582,10 +589,10 @@ func adjustOutLevels() {
 			}
 		} else {
 			origRecord := record
-			out.SetLogFile(globs.AbsPathify(record))
+			out.SetLogFile(path.AbsPathify(record))
 			// quick little hack to trim out home dir and shove in ~, keeps
 			// the usage output brief if --help is used and such
-			homeDir := globs.UserHomeDir()
+			homeDir := homedir.UserHomeDir()
 			if homeDir != "" && strings.HasPrefix(record, homeDir+string(filepath.Separator)) {
 				length := len(homeDir)
 				rest := record[length:]
