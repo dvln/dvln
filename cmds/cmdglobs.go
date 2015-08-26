@@ -69,6 +69,8 @@ func doPkgCmdGlobsInit() {
 
 	// Section: ConstGlobal variables to store data (default value only, no overrides)
 	// - please add them alphabetically and don't reuse existing opts/vars
+	globs.SetDefault("wkspcmetadir", ".dvln")
+	globs.SetDesc("wkspcmetadir", "where dvln config info exists in a workspace", globs.ExpertUser, globs.ConstGlobal)
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars

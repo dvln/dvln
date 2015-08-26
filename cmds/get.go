@@ -72,6 +72,12 @@ func setupGetCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 // requsted via the CLI
 func get(cmd *cli.Command, args []string) {
 	out.Debugln("Initialization done, firing up get()")
+	wkspcRoot := globs.GetString("wkspcRoot")
+	if wkspcRoot == "" {
+		out.Println("Workspace root: no workspace yet exists")
+	} else {
+		out.Println("Workspace root:", globs.GetString("wkspcRoot"))
+	}
 	out.Println("Look up codebase")
 	//codebase := cmd.Flags().Lookup("codebase").Value.String()
 	codebase := globs.GetString("codebase")

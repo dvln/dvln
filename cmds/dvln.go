@@ -37,6 +37,7 @@ import (
 	"github.com/dvln/util/homedir"
 	"github.com/dvln/util/path"
 	globs "github.com/dvln/viper"
+	"github.com/dvln/wkspc"
 )
 
 // dvlnCmd is dvln's root command. Every other command attached to dvlnCmd
@@ -780,6 +781,12 @@ func dvlnFinalPrep() (bool, int) {
 		out.Print(fmt.Sprintf("%v", globs.GetSingleton()))
 		out.Exit(0)
 		return true, 0
+	}
+	// Find the workspaces root dir (will store it in "wkspcRoot" in viper if
+	// there are no problems, note that it may be "" if there is no workspace)
+	_, err := wkspc.Root()
+	if err != nil {
+		out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem scanning for a workspace", 2006))
 	}
 	return false, 0
 }
