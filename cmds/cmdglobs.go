@@ -69,8 +69,8 @@ func doPkgCmdGlobsInit() {
 
 	// Section: ConstGlobal variables to store data (default value only, no overrides)
 	// - please add them alphabetically and don't reuse existing opts/vars
-	globs.SetDefault("wkspcmetadir", ".dvln")
-	globs.SetDesc("wkspcmetadir", "where dvln config info exists in a workspace", globs.ExpertUser, globs.ConstGlobal)
+	globs.SetDefault("wkspcMetaDir", ".dvln")
+	globs.SetDesc("wkspcMetaDir", "where dvln config info exists in a workspace", globs.InternalUse, globs.ConstGlobal)
 
 	// Section: BasicGlobal variables to store data (env, config file, default)
 	// - please add them alphabetically and don't reuse existing opts/vars
@@ -109,7 +109,7 @@ func doPkgCmdGlobsInit() {
 	globs.SetDesc("devline", "development line name", globs.NoviceUser, globs.CLIGlobal)
 
 	globs.SetDefault("fatalon", 1) // exits on 1st VCS error
-	globs.SetDesc("fatalon", "# of VCS clone errs to choke on", globs.ExpertUser, globs.CLIGlobal)
+	globs.SetDesc("fatalon", "# of VCS errs needed to cause exit", globs.ExpertUser, globs.CLIGlobal)
 
 	globs.SetDefault("force", false) // fail on dangerous ops
 	globs.SetDesc("force", "force bypass of protections", globs.ExpertUser, globs.CLIGlobal)
@@ -151,7 +151,7 @@ func doPkgCmdGlobsInit() {
 	globs.SetDesc("version", "show tool version details", globs.StandardUser, globs.CLIOnlyGlobal)
 
 	globs.SetDefault("wkspcdir", ".") // assume current dir is where workspace is
-	globs.SetDesc("wkspcdir", "workspace directory", globs.StandardUser, globs.CLIGlobal)
+	globs.SetDesc("wkspcdir", "workspace directory", globs.StandardUser, globs.CLIOnlyGlobal)
 
 	// Section: <add more sections as needed>
 

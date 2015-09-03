@@ -115,7 +115,7 @@ func addSubCommands(c *cli.Command) {
 	//c.AddCommand(freezeCmd) //    % dvln freeze ..
 	c.AddCommand(getCmd) //         % dvln get ..
 	//c.AddCommand(issueCmd) //     % dvln issue ..
-	//c.AddCommand(logCmd) //       % dvln log ..
+	//c.AddCommand(logCmd) //       % dvln log ..  (or maybe dvln list?)
 	//c.AddCommand(manCmd) //       % dvln man ..
 	//c.AddCommand(mergeCmd) //     % dvln merge ..
 	//c.AddCommand(mirrorCmd) //    % dvln mirror ..
@@ -266,9 +266,15 @@ func Execute(args []string) int {
 	// Note: hold on acting on the error in case we can set up JSON, see below
 	err := scanUserCfgAndReinit()
 
-	// See if in JSON output mode, if so set the 'out' pkg appropriately..
+	// See if in JSON output mode, if so set the 'out' pkg appropriately...
 	look := globs.GetString("look")
 	if look == "json" {
+		// See the 'out' pkg and the "Formatter" interface there, this allows
+		// dying msgs (fatal/error+exit/issue+exit) or not-dying msgs (no exit)
+		// types of output msgs to be shown in JSON format.  Basically, in JSON
+		// mode "dying" messages (fatal/error/issue levels + exit) come up as
+		// 'error' and non-terminal (error/issue, no exit) come up as 'warning'
+		// in the JSON output (w/output level, msg & error code shown within)
 		var handleJSON handleLookJSONMsgs
 		out.SetFormatter(out.LevelIssue, handleJSON)
 		out.SetFormatter(out.LevelError, handleJSON)
@@ -278,7 +284,7 @@ func Execute(args []string) int {
 		out.Fatal(err)
 	}
 
-	// Full opt/config file setup is now set up, now wrap up any early prep of
+	// Full opt/config file setup is now complete, wrap up any early prep of
 	// the dvln tool before kicking off the 'cli' (cobra) libraries Execute()
 	// method (ie: start up commands/subcommands and finish processing opts)...
 	// this sets up # of CPU's to leverage, handles easy requests the user gives
@@ -782,11 +788,19 @@ func dvlnFinalPrep() (bool, int) {
 		out.Exit(0)
 		return true, 0
 	}
-	// Find the workspaces root dir (will store it in "wkspcRoot" in viper if
-	// there are no problems, note that it may be "" if there is no workspace)
-	_, err := wkspc.Root()
+	// Find the workspaces root dir, will cache it in the wkspc module, if
+	// there is no workspace can be "" at this point
+	rootDir, err := wkspc.RootDir()
 	if err != nil {
 		out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem scanning for a workspace", 2006))
+		return true, errExit
+	}
+	// This will bootstrap the workspace root dir directory structure
+	if rootDir != "" {
+		if err = wkspc.SetRootDir(rootDir); err != nil {
+			out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem prepping the workspace", 2007))
+			return true, errExit
+		}
 	}
 	return false, 0
 }
