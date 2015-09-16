@@ -122,7 +122,7 @@ func addSubCommands(c *cli.Command) {
 	//c.AddCommand(mvCmd) //        % dvln mv ..
 	//c.AddCommand(patchCmd) //     % dvln patch ..
 	//c.AddCommand(pushCmd) //      % dvln push ..
-	c.AddCommand(pullCmd) //        % dvln pull ..
+	//c.AddCommand(pullCmd) //      % dvln pull ..
 	//c.AddCommand(releaseCmd) //   % dvln release ..
 	//c.AddCommand(retireCmd) //    % dvln retire ..
 	//c.AddCommand(revertCmd) //    % dvln revert ..
@@ -132,6 +132,7 @@ func addSubCommands(c *cli.Command) {
 	//c.AddCommand(tagCmd) //       % dvln tag ..
 	//c.AddCommand(thawCmd) //      % dvln thaw ..
 	//c.AddCommand(trackCmd) //     % dvln track ..
+	c.AddCommand(updateCmd) //      % dvln update ..
 	c.AddCommand(versionCmd) //     % dvln version ..
 }
 
@@ -687,7 +688,7 @@ func reloadCLIDefaults() {
 	reloadCLIFlags := true
 	setupDvlnCmdCLIArgs(dvlnCmd, reloadCLIFlags)
 	setupGetCmdCLIArgs(getCmd, reloadCLIFlags)
-	setupPullCmdCLIArgs(pullCmd, reloadCLIFlags)
+	setupUpdateCmdCLIArgs(updateCmd, reloadCLIFlags)
 	setupVersionCmdCLIArgs(versionCmd, reloadCLIFlags)
 	// NewSubCommand: If you add a new subcommand you need to add a method to
 	//     that subcommand named like what's above, see cmds/get.go for the
