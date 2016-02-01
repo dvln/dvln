@@ -166,6 +166,8 @@ func setupDvlnCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 	c.PersistentFlags().StringP("config", "C", globs.GetString("config"), desc)
 	desc, _, _ = globs.Desc("debug")
 	c.PersistentFlags().BoolP("debug", "D", globs.GetBool("debug"), desc)
+	desc, _, _ = globs.Desc("help")
+	c.PersistentFlags().BoolP("help", "h", globs.GetBool("help"), desc)
 	desc, _, _ = globs.Desc("force")
 	c.PersistentFlags().BoolP("force", "f", globs.GetBool("force"), desc)
 	desc, _, _ = globs.Desc("fatalon")

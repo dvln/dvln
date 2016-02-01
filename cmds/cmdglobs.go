@@ -117,6 +117,9 @@ func doPkgCmdGlobsInit() {
 	globs.SetDefault("globs", "") // show available cfg|env settings to user
 	globs.SetDesc("globs", "show settings available, cfg|env", globs.ExpertUser, globs.CLIOnlyGlobal)
 
+	globs.SetDefault("help", false)
+	globs.SetDesc("help", "display tool usage", globs.StandardUser, globs.CLIOnlyGlobal)
+
 	globs.SetDefault("interact", false) // the default is no user prompting
 	globs.SetDesc("interact", "prompting control", globs.StandardUser, globs.CLIGlobal)
 
