@@ -110,7 +110,8 @@ func TestBogusArgsCommand(t *testing.T) {
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
 	x := setupDvlnCmdTest("--baloney")
 	os.Setenv("PKG_OUT_NO_EXIT", "0")
-	checkResultContains(t, x, "Issue #2000: Found unknown flag: --baloney")
+	checkResultContains(t, x, "Issue #2000: Error: unknown flag: --baloney")
+
 }
 
 // TestHelpInterface runs through basic help for the dvln meta-cmd to see if the
@@ -120,17 +121,17 @@ func TestHelpInterface(t *testing.T) {
 	checkResultContains(t, x, "dvln: Multi-package development line and workspace management tool")
 	checkResultContains(t, x, "Available Commands:")
 	checkResultContains(t, x, "get packages")
-	checkResultContains(t, x, "-D, --debug=false: control debug output")
+	checkResultContains(t, x, "-D, --debug           control debug output")
 	x = setupDvlnCmdTest("--help")
 	checkResultContains(t, x, "dvln: Multi-package development line and workspace management tool")
 	checkResultContains(t, x, "Available Commands:")
 	checkResultContains(t, x, "get packages")
-	checkResultContains(t, x, "-D, --debug=false: control debug output")
+	checkResultContains(t, x, "-D, --debug           control debug output")
 	x = setupDvlnCmdTest("-h")
 	checkResultContains(t, x, "dvln: Multi-package development line and workspace management tool")
 	checkResultContains(t, x, "Available Commands:")
 	checkResultContains(t, x, "get packages")
-	checkResultContains(t, x, "-D, --debug=false: control debug output")
+	checkResultContains(t, x, "-D, --debug           control debug output")
 	x = setupDvlnCmdTest("-hLjson")
 	checkResultContains(t, x, "\"apiVersion\": ")
 	checkResultContains(t, x, "\"id\": 0,")
@@ -255,8 +256,7 @@ func TestVersionFunctionality(t *testing.T) {
 func TestGlobsFunctionality(t *testing.T) {
 	os.Setenv("PKG_OUT_NO_EXIT", "1")
 	x := setupDvlnCmdTest("--globs")
-	checkResultContains(t, x, "Issue #2000: Found flag which needs an argument: --globs")
-	checkResultContains(t, x, "Issue #2000: Run 'dvln help' for subcommand listing and basic usage.")
+	checkResultContains(t, x, "Issue #2000: Error: flag needs an argument: --globs")
 	x = setupDvlnCmdTest("-vG=env")
 	checkResultContains(t, x, "DVLN_ANALYSIS: ")
 	checkResultContains(t, x, "  Description: memory and timing analytics")

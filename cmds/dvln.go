@@ -215,8 +215,11 @@ func setupDvlnCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 //        if so then JSON outputting here might need extending (as anything
 //        else will not be dumped in JSON currently, even if in JSON "look")
 func showCLIPkgOutput(theOutput string, look string) {
-	help := globs.GetBool("help")
-	if help && look == "json" {
+	//FIXME: help is coming back false when -h used... 'dvln get -h -Ljson', I
+	//       think this is because help isn't being properly registered by Execute()
+	//help := globs.GetBool("help")
+	//if help && look == "json" {
+	if look == "json" {
 		type helpStruct struct {
 			HelpMsg   string `json:"helpMsg"`
 			RecordLog string `json:"recordLog,omitempty"`
@@ -406,26 +409,17 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
 
 	// Tell the pflags package (used by 'cli') to ignore bad flags for this
 	// early pass of flag parsing, the dvlnCmd.Execute() call will catch those
+	// later, for now lets get whatever "good" CLI opts we can and turn on debug
+	// or JSON mode or whatever if we can for the client.
 	c.Flags().SetErrorHandling(flag.IgnoreError)
 
-	// Parse the CLI opts into likely subcmd, flags given and any errors found,
-	// note that c.Find() will not know about the 'help' subcmd yet (that is set
-	// up in cli.Execute() in the 'cli' (cobra) package currently) so the new
-	// ignore bad command mechanism was added as a bit of a cheat, bad cmds will
-	// be caught at cli.Execute() time regardless so no worries:
-	ignoreBadCmds := true
-	cmd, flags, err := c.Find(opts, ignoreBadCmds)
-	if err != nil && topCmd {
-		// If this is the 1st pass on the top level dvlnCmd object (not the
-		// subcommand getCmd or versionCmd objects) and if we are ignore flag
-		// errors (as above) then any error coming back from Find will be from
-		// non-flag issues (eg: bad subcommand name), will fail here if so:
-		err = out.NewErrf(2002, "Unable to parse command line: %s\nPlease run 'dvln help' for usage\n", err)
-		out.IssueExit(-1, err)
-	}
-	// For nice errors lets stash either 'dvln' or, if a subcommand was used,
-	// into the 'currentCmd' unexported package global so we know what the user
-	// is running and can work (and error) with respect to that
+	// Parse the CLI opts into likely subcmd, flags given and any errors found.
+	// As above we're ignoring errors for this early pass
+	cmd, flags, _ := c.Find(opts)
+
+	// For clean errors lets stash the top level cmd name or, if a subcmd was
+	// used stash that, into the 'currentCmd' unexported package global so we
+	// know what the user is running and can work (and err) with respect to that
 	if currentCmd == "" {
 		currentCmd = cmd.Name()
 	}
@@ -434,13 +428,14 @@ func pushCLIOptsToGlobs(c *cli.Command, topCmd bool, args []string) {
 
 	// Scan all flags to see what was used on CLI, shove ONLY used flags into
 	// the 'globs' (viper) pkg so it's pflags and overide config levels focus
-	// just on those CLI options actually used (I prefer that personally)
+	// just on those CLI options actually used (kind of a custom hack)
 	globs.SetPFlags(c.Flags())
 	c.Flags().SetErrorHandling(currErrHndl)
-	// if running 'dvln <subcmd> ..' we'll also scan the <subcmd> args here
-	// recursively, but if just 'dvln ..' with no subcmd then no need
+
+	// If running '<cmd> <subcmd> ..' we'll also scan the <subcmd> args here
+	// recursively, but if just 'mycmd ..' with no subcmd then no need
 	if c.HasSubCommands() && cmd.Name() != c.Root().Name() {
-		topCmd = false // this is a subcmd, not the top 'dvln' cmd any longer
+		topCmd = false // this is a subcmd, not the top level cmd any longer
 		pushCLIOptsToGlobs(cmd, topCmd, args)
 	}
 }
