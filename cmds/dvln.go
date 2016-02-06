@@ -132,7 +132,7 @@ func addSubCommands(c *cli.Command) {
 	//c.AddCommand(tagCmd) //       % dvln tag ..
 	//c.AddCommand(thawCmd) //      % dvln thaw ..
 	//c.AddCommand(trackCmd) //     % dvln track ..
-	c.AddCommand(updateCmd) //      % dvln update ..
+	c.AddCommand(updateCmd)  //     % dvln update ..
 	c.AddCommand(versionCmd) //     % dvln version ..
 }
 
@@ -371,22 +371,29 @@ func scanUserConfigFile() error {
 	configCleanPath := path.AbsPathify(configPath)
 	globs.Set("configdir", "")
 
-	// Typically Config defaults to a path (dir) to look for config.<extension>
+	// Typically config defaults to a path (dir) to look for config.<extension>
 	// files in but it can also be a full path to a file, try and detect which:
-	if fileInfo, err := os.Stat(configCleanPath); err == nil && fileInfo.IsDir() {
+    var err error
+    var fileInfo os.FileInfo
+	if fileInfo, err = os.Stat(configCleanPath); err == nil && fileInfo.IsDir() {
 		// if it's a dir then just add the path, default looks for cfg.json|..
 		globs.AddConfigPath(configPath)
 		globs.Set("configdir", configCleanPath)
 	} else {
 		// if it's not a visible dir assume it's a file, if no file no problem
-		if err == nil && !fileInfo.IsDir() {
-			globs.Set("configdir", filepath.Dir(configCleanPath))
-		}
-		globs.SetConfigFile(configCleanPath)
+        if err == nil && !fileInfo.IsDir() {
+            globs.Set("configdir", filepath.Dir(configCleanPath))
+            globs.SetConfigFile(configCleanPath)
+        } else {
+            out.Debugln("No config file located, normal, continuing")
+            configCleanPath = ""
+        }
 	}
-	if err := globs.ReadInConfig(); err != nil {
-		return out.WrapErr(err, "Configuration package failed to read config", 2002)
-	}
+    if configCleanPath != "" {
+        if err := globs.ReadInConfig(); err != nil {
+            return out.WrapErr(err, "Configuration package failed to read config", 2002)
+        }
+    }
 	return nil
 }
 
@@ -762,7 +769,7 @@ func dvlnFinalPrep() (bool, int) {
 	}
 
 	// If the developer asks for the version of the tool print that out:
-	if version := globs.GetBool("version"); version {
+	if printVersion := globs.GetBool("version"); printVersion {
 		out.Print(lib.DvlnVerStr())
 		out.Exit(0)
 		return true, 0
@@ -786,19 +793,30 @@ func dvlnFinalPrep() (bool, int) {
 		out.Exit(0)
 		return true, 0
 	}
+
+	rootDir := ""
+	var err error
 	// Find the workspaces root dir, will cache it in the wkspc module, if
-	// there is no workspace can be "" at this point
-	rootDir, err := wkspc.RootDir()
+	// there is no workspace can be "" at this point (note: some cmds take
+	// a '--wkspcdir' option so that is taken into consideration 1st)
+	wkspcdir := globs.GetString("wkspcdir") // CLI option --workspace/-w
+	if wkspcdir != "." && wkspcdir != "" {
+		rootDir, err = wkspc.RootDir(wkspcdir) // handle a CLI given dir/subdir
+		out.Traceln("Workspace dir passed in:", wkspcdir)
+	} else {
+		out.Traceln("No workspace dir passed in, driving off of cwd")
+		rootDir, err = wkspc.RootDir() // scan from CWD for a wkspc root dir
+	}
+	out.Debugln("Workspace root dir:", rootDir)
 	if err != nil {
+		// err means a failure (no workspace is not an error, it's normal)
 		out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem scanning for a workspace", 2006))
 		return true, errExit
 	}
 	// This will bootstrap the workspace root dir directory structure
-	if rootDir != "" {
-		if err = wkspc.SetRootDir(rootDir); err != nil {
-			out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem prepping the workspace", 2007))
-			return true, errExit
-		}
+	if err = wkspc.SetRootDir(rootDir); err != nil {
+		out.ErrorExit(errExit, out.WrapErr(err, "Unexpected problem setting the workspace root dir", 2007))
+		return true, errExit
 	}
 	return false, 0
 }
