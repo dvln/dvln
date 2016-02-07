@@ -230,8 +230,7 @@ func showCLIPkgOutput(theOutput string, look string) {
 		fields := make([]string, 0, 0)
 		items := make([]interface{}, 0, 0)
 		var usage helpStruct
-		cleanOutput := api.EscapeJSONString([]byte(theOutput))
-		usage.HelpMsg = cast.ToString(cleanOutput)
+		usage.HelpMsg = theOutput
 		fields = append(fields, "helpMsg")
 		if recTgt := globs.GetString("record"); recTgt != "" {
 			usage.RecordLog = recTgt
