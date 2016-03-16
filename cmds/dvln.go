@@ -372,27 +372,27 @@ func scanUserConfigFile() error {
 
 	// Typically config defaults to a path (dir) to look for config.<extension>
 	// files in but it can also be a full path to a file, try and detect which:
-    var err error
-    var fileInfo os.FileInfo
+	var err error
+	var fileInfo os.FileInfo
 	if fileInfo, err = os.Stat(configCleanPath); err == nil && fileInfo.IsDir() {
 		// if it's a dir then just add the path, default looks for cfg.json|..
 		globs.AddConfigPath(configPath)
 		globs.Set("configdir", configCleanPath)
 	} else {
 		// if it's not a visible dir assume it's a file, if no file no problem
-        if err == nil && !fileInfo.IsDir() {
-            globs.Set("configdir", filepath.Dir(configCleanPath))
-            globs.SetConfigFile(configCleanPath)
-        } else {
-            out.Debugln("No config file located, normal, continuing")
-            configCleanPath = ""
-        }
+		if err == nil && !fileInfo.IsDir() {
+			globs.Set("configdir", filepath.Dir(configCleanPath))
+			globs.SetConfigFile(configCleanPath)
+		} else {
+			out.Debugln("No config file located, normal, continuing")
+			configCleanPath = ""
+		}
 	}
-    if configCleanPath != "" {
-        if err := globs.ReadInConfig(); err != nil {
-            return out.WrapErr(err, "Configuration package failed to read config", 2002)
-        }
-    }
+	if configCleanPath != "" {
+		if err := globs.ReadInConfig(); err != nil {
+			return out.WrapErr(err, "Configuration package failed to read config", 2002)
+		}
+	}
 	return nil
 }
 
