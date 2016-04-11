@@ -22,10 +22,18 @@ import (
 	"github.com/dvln/out"
 )
 
+// This is initialized in the Makefile (or build CLI) via this:
+//   GITVERSION:=$(shell git rev-list -1 HEAD)
+//   GO_BUILD=$(GO_CMD) build -ldflags "-X main.commitSHA1=${GITVERSION}"
+// So if you run 'go build' without this info then it'll be blank in
+// the derived binary (which is fine, just means it won't show up in
+// the version output screens verbose mode)
+var commitSHA1 = ""
+
 func main() {
 	// Kick off the the 'cli' mgmt package (Cobra commander) for the dvln
 	// command and the various subcommands and opts:
-	exitVal := cmds.Execute(os.Args)
+	exitVal := cmds.Execute(commitSHA1, os.Args)
 	out.Exit(exitVal)
 	// Note, the 2nd exit shouldn't happen but in case someone told
 	//       the 'out' pkg to bypass exitting (for test) lets exit now:

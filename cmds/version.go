@@ -64,6 +64,6 @@ func setupVersionCmdCLIArgs(c *cli.Command, reloadCLIFlags bool) {
 // relies upon the library to format the version based on the options
 // selected (eg: terse, regular, verbose with text or json as the "look")
 func version(cmd *cli.Command, args []string) {
-	dvlnVerStr := lib.DvlnVerStr()
+	dvlnVerStr := lib.DvlnVerStr(commitSHA1)
 	out.Print(dvlnVerStr)
 }

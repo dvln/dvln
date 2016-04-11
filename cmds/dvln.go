@@ -65,6 +65,10 @@ var Timer *analysis.B
 var tmpLogfileMsg string
 var tmpLogfileActive = false
 
+// Used to insert git sha1 for this build when built from a Makefile, will
+// be empty when built via go build unless -ldflags is used correctly
+var commitSHA1 = ""
+
 // At startup time we'll initialize subcmds, opts, etc
 func init() {
 	doDvlnInit()
@@ -257,8 +261,13 @@ func showCLIPkgOutput(theOutput string, look string) {
 // configuration data (combined with init() setting up options and available
 // subcommands and such) and then kicks off the 'cli' (cobra) package to run
 // subcommands and such via the dvlnCmd.Execute() call within the routine.
-func Execute(args []string) int {
+// Params:
+//	sha1 (string): git commit sha1 of current workspace HEAD commit (or "")
+//	args ([]string): cmd args to be processed
+func Execute(sha1 string, args []string) int {
 	Timer.Step("cmds.Execute(): init() complete (defaults set, subcmds added, CLI args set up)")
+	// Set up a package global with the commit sha1 value (if we have one)
+	commitSHA1 = sha1
 
 	// Shove the CLI args into the 'globs' (viper) package before we even kick
 	// into the 'cli' package Execute() call below, allows us to turn on debug
@@ -769,7 +778,7 @@ func dvlnFinalPrep() (bool, int) {
 
 	// If the developer asks for the version of the tool print that out:
 	if printVersion := globs.GetBool("version"); printVersion {
-		out.Print(lib.DvlnVerStr())
+		out.Print(lib.DvlnVerStr(commitSHA1))
 		out.Exit(0)
 		return true, 0
 	}

@@ -24,10 +24,12 @@
 #   make test-verbose -> runs 'go test -v -cover' on all packages
 #   make vet -> uses 'go vet' to check for code issues on ARK packages
 
+GITVERSION:=$(shell git rev-list -1 HEAD)
+#GITTAG:=$(shell git describe --tags)
 GO_CMD=go
 GIT_CMD=git
-GO_BUILD=$(GO_CMD) build
-GO_BUILD_RACE=$(GO_CMD) build -race
+GO_BUILD=$(GO_CMD) build -ldflags "-X main.commitSHA1=${GITVERSION}"
+GO_BUILD_RACE=$(GO_CMD) build -race -ldflags "-X main.commitSHA1=${GITVERSION}"
 GO_TEST=$(GO_CMD) test -cover
 GO_TEST_RACE=$(GO_CMD) test -race -cover
 GO_TEST_VERBOSE=$(GO_CMD) test -v -cover
