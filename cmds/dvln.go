@@ -570,7 +570,7 @@ func adjustOutLevels() {
 	pretty.SetOutputPrefixStr(globs.GetString("textprefix"))
 
 	// Handle recording of output to logfile if set up...
-	if record := globs.GetString("record"); record != "" && record != "off" {
+	if record := globs.GetString("record"); os.Getenv("DVLN_LOGFILE_OFF") != "1" && record != "" && record != "off" {
 		// If the user has requested recording/logging the below will set up
 		// an io.Writer for a log file (via the 'out' package).  At this point
 		// logging is enabled at the "Info/Print" (LevelInfo) level which
