@@ -831,7 +831,7 @@ func dvlnFinalPrep() (bool, int) {
 
 type handleLookJSONMsgs struct{}
 
-// FormatMessage in this context implements the Formatter interface from
+// FormatMessage implements the output stream "Formatter" interface from
 // the 'out' package.  This is only called if in JSON mode and only for
 // output levels Issue, Error and Fatal (note: these are double checked
 // in the method as well "just in case").  If JSON output desired we'll
@@ -848,12 +848,19 @@ type handleLookJSONMsgs struct{}
 // it even if any error has occurred (and we'll want to inform them of any
 // non-fatal issues as well via the JSON 'warning' field to use as they
 // see fit)
-func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code int, stack string, dying bool) (string, int, bool) {
+func (f handleLookJSONMsgs) FormatMessage(
+	msg string,
+	outLevel out.Level,
+	code int,
+	dying bool,
+	mdata out.FlagMetadata) (string, int, int, bool) {
+
+	applyMask := out.ForBoth
 	suppressOutputMask := 0
 	suppressNativePrefixing := false
 	look := globs.GetString("look")
 	if look != "json" || outLevel < out.LevelIssue {
-		return msg, suppressOutputMask, suppressNativePrefixing
+		return msg, 0, suppressOutputMask, suppressNativePrefixing
 	}
 	problemMsg := api.NewMsg(msg, code, fmt.Sprintf("%s", outLevel))
 	if dying {
@@ -868,7 +875,7 @@ func (f handleLookJSONMsgs) FormatMessage(msg string, outLevel out.Level, code i
 		api.SetStoredNonFatalWarning(problemMsg, int(out.DefaultErrCode()))
 		msg = ""
 	}
-	return msg, suppressOutputMask, suppressNativePrefixing
+	return msg, applyMask, suppressOutputMask, suppressNativePrefixing
 }
 
 // run for the dvln cmd really doesn't do anything but recommend the user
